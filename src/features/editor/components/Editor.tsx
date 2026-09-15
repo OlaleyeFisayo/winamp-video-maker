@@ -11,6 +11,8 @@ import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
+import { runExport } from "../lib/runExport"
+import { useExport } from "../../../shared/store/useExport"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
 
@@ -61,6 +63,13 @@ export function Editor() {
   const pendingSeek = useRef<{ index: number; offset: number; pause: boolean; loaded: boolean } | null>(null)
 
   useShortcuts()
+
+  // the editor owns Webamp, so it supplies the export runner the dialog calls
+  useEffect(() => {
+    useExport.getState().setRunner(runExport)
+    // dev aid for checking the export renderer without decoding a video
+    return () => useExport.getState().setRunner(null)
+  }, [])
 
   // fullscreen goes on the whole editor, so the frame keeps sizing from container units
   // and the transport and timeline come with it

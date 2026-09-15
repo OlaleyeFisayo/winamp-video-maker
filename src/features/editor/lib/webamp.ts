@@ -7,8 +7,11 @@ import { skinThumbUrl } from "../../../shared/lib/skinThumb"
 type Action = { type: string; absolute?: boolean }
 type Dispatch = (action: object) => unknown
 type GetState = () => {
-  media?: { timeElapsed?: number }
+  media?: { timeElapsed?: number; volume?: number; balance?: number; shuffle?: boolean; repeat?: boolean }
   playlist?: { trackOrder: number[]; currentTrack: number | null }
+  equalizer?: { on: boolean; auto: boolean; sliders: Record<string, number> }
+  display?: { visualizerStyle?: number }
+  windows?: { genWindows?: Record<string, { open: boolean; shade?: boolean }> }
 }
 type Middleware = (store: { dispatch: Dispatch; getState: GetState }) => (next: (a: Action) => unknown) => (action: Action) => unknown
 
@@ -35,6 +38,21 @@ const captureStore: Middleware = (store) => {
   dispatch = store.dispatch
   getState = store.getState
   return (next) => (action) => next(action)
+}
+
+/** Everything the export renderer needs to draw the skin the way it looks right now. */
+export const snapshotSkinState = () => {
+  const s = getState?.() ?? {}
+  const win = (id: string) => s.windows?.genWindows?.[id]?.open ?? false
+  return {
+    volume: s.media?.volume ?? 50,
+    balance: s.media?.balance ?? 0,
+    eq: { on: s.equalizer?.on ?? false, auto: s.equalizer?.auto ?? false, sliders: s.equalizer?.sliders ?? {} },
+    vis: s.display?.visualizerStyle ?? 0,
+    shuffle: s.media?.shuffle ?? false,
+    repeat: s.media?.repeat ?? false,
+    windows: { main: win("main"), equalizer: win("equalizer"), playlist: win("playlist") },
+  }
 }
 
 /** Seconds elapsed in the current track. */
@@ -111,7 +129,9 @@ export const primeSkin = async (template: Template) => {
     const response = await fetch(templateUrl(template))
     if (!response.ok) return
     const blob = await response.blob()
-    cache.set(template.id, URL.createObjectURL(blob))
+    const url = URL.createObjectURL(blob)
+    cache.set(template.id, url)
+    if (useTemplate.getState().id === template.id) useTemplate.getState().setArchive(url)
     const thumb = await skinThumbUrl(await blob.arrayBuffer())
     if (thumb) useTemplate.getState().setThumb(template.id, thumb)
   } catch {
@@ -125,6 +145,7 @@ export const loadSkin = async (template: Template) => {
   const cached = cache.get(template.id)
   if (cached) {
     webamp.setSkinFromUrl(cached)
+    useTemplate.getState().setArchive(cached)
     return webamp.skinIsLoaded()
   }
 
@@ -157,6 +178,7 @@ export const loadSkin = async (template: Template) => {
     })
 
     webamp.setSkinFromUrl(url)
+    useTemplate.getState().setArchive(url)
     await webamp.skinIsLoaded()
   } catch {
     toast.show("That template couldn't load. Try another.")

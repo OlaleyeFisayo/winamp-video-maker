@@ -53,7 +53,7 @@ export function Header() {
           title={exportHint(canExport, name)}
           onClick={() => openExport(true)}
         >
-          Export video
+          Export
         </Button>
       </div>
     </header>
