@@ -4,6 +4,7 @@ import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { useElementSize } from "../../../shared/lib/useElementSize"
+import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
@@ -45,7 +46,7 @@ export function Editor() {
   const frame = useRef<HTMLDivElement>(null)
   const commands = useAudio((s) => s.commands)
   const { width, height } = useFrame(frameSize)
-  const { scale, color } = useCanvas()
+  const { scale, mode, color, image, fit } = useCanvas()
   const frameSizePx = useElementSize(frame, supported)
   // zoom, not transform: zoom changes layout geometry too, so Webamp's slider drags stay accurate
   const zoom = frameSizePx.height
@@ -193,11 +194,20 @@ export function Editor() {
       <div className="grid min-h-0 w-full place-items-center @container-size">
         <div
           ref={frame}
-          className="relative"
+          className={cn("relative", mode === "transparent" && "checkerboard")}
           style={{
             width: `min(100cqw, ${width / height} * 100cqh)`,
             aspectRatio: `${width} / ${height}`,
-            background: color,
+            ...(mode === "transparent"
+              ? {}
+              : mode === "image" && image
+                ? {
+                    backgroundImage: `url(${image})`,
+                    backgroundSize: fit,
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }
+                : { background: color }),
           }}
         >
           <div className="absolute inset-0 grid place-items-center overflow-hidden">
