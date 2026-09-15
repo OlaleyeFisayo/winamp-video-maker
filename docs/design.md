@@ -122,7 +122,7 @@ Three sections in this fixed order, because it is the creator's order of work: T
 - Empty: Body text in `ash`, "No tracks yet. Add MP3 or WAV files. They play in this order."
 - Each row is one 36px line, `border-rule bg-graphite rounded-sm`: a 24px index button in Data mono `ash` ("Play <title>"), the name as a borderless inline input (border `rule` on hover, `ash` on focus), duration in Data mono `ash` (`--:--` until known), and a 28px `IconX` button "Remove <title>".
 - Renaming: edit the name, Enter or blur commits, Esc reverts. The new name shows in the skin's playlist and marquee immediately; playback is not interrupted.
-- The list shows at most five rows (212px) and scrolls for more.
+- The list shows at most five rows (212px) and scrolls for more. The playing track is always scrolled into view here, and in the skin's playlist it is scrolled into view and selected, so both lists agree on the active row.
 - Active row (the track the skin is playing): `contrast` border and a 14px `IconPlayerPlay` in `paper` in place of the index. It mirrors the highlight in the skin's own playlist window; both move together.
 - Mixed picks keep the audio files and show "Some files weren't audio and were skipped. Use MP3, WAV, OGG or FLAC." under the list until the next add.
 - The first track added names the video when the name is still empty. Adding appends to the skin's playlist without interrupting playback; removing reloads the remaining list.
@@ -134,7 +134,7 @@ Three sections in this fixed order, because it is the creator's order of work: T
 
 ### 6.3 Editor (centre)
 
-Implementation: the `webamp` package renders the skin. One instance for the app's lifetime (`features/editor/lib/webamp.ts`), mounted with `renderInto` on the editor section, which must be `position: relative`. Webamp centres its open windows in that section. Main, equalizer and playlist windows open, stacked. Window positions are locked: a Redux middleware drops drag and resize actions, and Close is cancelled through `onWillClose`, so every other skin control keeps working. The skin renders into a 275×348 box that CSS grid keeps centred on resize. The playlist is mirrored into `useAudio.tracks` on every Webamp state change; the sidebar sends `add` / `remove` / `play` commands through `useAudio.commands`, which the editor applies. The current track index is mirrored into `useAudio.current` from `onTrackDidChange` by matching the loaded url against `getPlaylistTracks()`; the sidebar asks to play a row through `useAudio.requested`, which the editor forwards to `setCurrentTrack`. `zIndex: 1` so dialogs and overlays sit above the skin. Audio comes from `useAudio.tracks`: appended files go through `appendTracks`, any other change reloads with `setTracksToPlay`, an empty list stops playback. Files are passed as blob tracks.
+Implementation: the `webamp` package renders the skin. One instance for the app's lifetime (`features/editor/lib/webamp.ts`), mounted with `renderInto` on the editor section, which must be `position: relative`. Webamp centres its open windows in that section. Main, equalizer and playlist windows open, stacked. Window positions are locked: a Redux middleware drops drag and resize actions, and Close is cancelled through `onWillClose`, so every other skin control keeps working. The skin renders into a 275×348 box that CSS grid keeps centred on resize. The playlist is mirrored into `useAudio.tracks` on every Webamp state change; the sidebar sends `add` / `remove` / `play` commands through `useAudio.commands`, which the editor applies. The current track index is mirrored into `useAudio.current` from `onTrackDidChange` by matching the loaded url against `getPlaylistTracks()`; the sidebar sends commands through `useAudio.commands`, which the editor applies. On every track change `revealTrack` selects the row in the skin playlist and sets its scroll position so the row is visible. `zIndex: 1` so dialogs and overlays sit above the skin. Audio comes from `useAudio.tracks`: appended files go through `appendTracks`, any other change reloads with `setTracksToPlay`, an empty list stops playback. Files are passed as blob tracks.
 
 
 - The bed is `graphite` with 32px padding, one step lighter than the panels so it reads as background, not surface. It is chrome and follows the theme. The frame sits on it.
@@ -181,6 +181,7 @@ Every primitive accepts `className` and forwards native props. They are styled o
 | `PanelSection` | `collapsible` | `Eyebrow` (plus optional `action` slot, right-aligned) + 8px gap + children. Adds a 1px `rule` divider and 24px above when not first. `collapsible` renders `<details open>` with a chevron in the summary. |
 | `Dropzone` | `idle`, `over`, `error` | A `<button>` that opens the native picker and accepts drops. Dashed border `rule`, `ash` on drag-over, `paper` on error. Renders an icon, a Body line, "Browse files", and the caller's error text underlined. Filters by `accept` (`multiple` optional); calls `onFiles` with the matches and `onReject` if any were dropped. |
 | `Segmented` | – | One-line radiogroup of equal segments, mono 12. Selected segment has a `contrast` border, never a fill. Arrow keys. Used for ratio, frame rate, resolution. |
+| `Toaster` | – | Bottom-centre stack of one-line notices, `graphite` on `rule`, 120 ms fade in, gone after 3 s or on X. `role="status"`. Webamp's native alerts are routed here. |
 | `Dialog` | – | Native `<dialog>` with `showModal`, so focus trap, Esc and the `overlay` backdrop come from the browser. Title row, body, optional footer. |
 | `Field` | – | Label (UI type) over a `graphite` input with `border-rule`, `rounded-sm`, height 36. |
 | `Swatches` | – | Row of 20×20 squares, `contrast` outline on the selected one. |
@@ -204,6 +205,7 @@ Words exist to make the tool easier to use. Sentence case everywhere. Plain verb
 - Buttons name the result: "Export video", "Add audio", "Change template", "Use this template", "Browse files", "Remove audio". A name stays the same through the whole flow: the button says "Export video", the progress toast says "Exporting video", the finished toast says "Video exported".
 - Empty states tell the person what to do: "No audio yet. Drop an MP3 or WAV here." "Add a track to hear the skin play."
 - Errors state the cause and the fix in that order: "This file isn't a Winamp skin. Choose a .wsz file." Never "Oops" or "Something went wrong".
+- Toasts are one sentence with no title, in the interface's voice: "That action isn't supported here." They never ask for a decision; that is a dialog.
 - Data is written in mono with real units: `03:24`, `1080 × 1920`, `2.4 MB`, `30 fps`.
 - The person controls a template, a track, a background and a frame. The interface never says skin file, blob, buffer, layer stack or canvas.
 
@@ -230,7 +232,7 @@ src/
     ui/                  # primitives listed in section 7, one file each, barrel index.ts
     layout/
       AppShell.tsx       # header / left / stage / right grid
-    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution)
+    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useToast (notices)
     lib/
       cn.ts              # class joiner
       formatTime.ts      # seconds to mm:ss

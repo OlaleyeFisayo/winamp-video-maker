@@ -3,7 +3,7 @@ import Webamp from "webamp"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { stripExt } from "../../../shared/lib/stripExt"
-import { getWebamp, renameTrack, renderOnce } from "../lib/webamp"
+import { getWebamp, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 
 const supported = Webamp.browserIsSupported()
 
@@ -45,8 +45,10 @@ export function Editor() {
       if (!same(useAudio.getState().tracks, next)) store.setTracks(next)
     })
     const unsubTrack = webamp.onTrackDidChange((info) => {
-      const i = info ? webamp.getPlaylistTracks().findIndex((t) => t.url === info.url) : -1
+      const playlist = webamp.getPlaylistTracks()
+      const i = info ? playlist.findIndex((t) => t.url === info.url) : -1
       store.setCurrent(i < 0 ? null : i)
+      if (i >= 0) revealTrack(i, playlist.length)
     })
     return () => {
       unsubState()

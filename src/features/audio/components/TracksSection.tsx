@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { IconPlayerPlay, IconPlus, IconX } from "@tabler/icons-react"
 import { Button, IconButton, PanelSection } from "../../../shared/ui"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
@@ -45,6 +45,7 @@ function Row({ track: t, index: i, active }: RowProps) {
   const enqueue = useAudio((s) => s.enqueue)
   return (
     <li
+      data-active={active || undefined}
       className={cn(
         "flex h-9 shrink-0 items-center gap-2 rounded-sm border bg-graphite pl-2 pr-1 transition-colors duration-100",
         active ? "border-contrast" : "border-rule",
@@ -74,10 +75,15 @@ function Row({ track: t, index: i, active }: RowProps) {
 export function TracksSection() {
   const { tracks, current, enqueue } = useAudio()
   const input = useRef<HTMLInputElement>(null)
+  const list = useRef<HTMLOListElement>(null)
   const [skipped, setSkipped] = useState(false)
 
-  const onPick = (list: FileList | null) => {
-    const files = [...(list ?? [])]
+  useEffect(() => {
+    list.current?.querySelector("li[data-active]")?.scrollIntoView({ block: "nearest" })
+  }, [current])
+
+  const onPick = (picked: FileList | null) => {
+    const files = [...(picked ?? [])]
     const ok = files.filter((f) => acceptsFile(f, ACCEPT))
     setSkipped(ok.length < files.length)
     if (!ok.length) return
@@ -117,7 +123,7 @@ export function TracksSection() {
         </p>
       ) : (
         // 5 rows of 36px plus 4 gaps of 8px; more than that scrolls
-        <ol className="flex max-h-[212px] flex-col gap-2 overflow-y-auto pr-1">
+        <ol ref={list} className="flex max-h-[212px] flex-col gap-2 overflow-y-auto pr-1">
           {tracks.map((t, i) => (
             <Row key={t.id} track={t} index={i} active={i === current} />
           ))}
