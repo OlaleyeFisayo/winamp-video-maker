@@ -48,7 +48,7 @@ export function Header() {
       <div className="flex items-center gap-3">
         <img
           src={theme === "dark" ? "/images/logo.png" : "/images/logo-light.png"}
-          alt="Playerz"
+          alt="winamp-video-maker"
           className="h-10"
         />
         <input
@@ -75,7 +75,7 @@ export function Header() {
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <IconButton aria-label="Keyboard shortcuts" onClick={() => openHelp(true)}>
+        <IconButton aria-label="About and keyboard shortcuts" onClick={() => openHelp(true)}>
           <IconHelp size={16} stroke={1.5} aria-hidden />
         </IconButton>
         <IconButton

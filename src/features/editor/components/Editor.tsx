@@ -13,8 +13,8 @@ import { putFile } from "../../../shared/lib/sessionFiles"
 import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
-import { runExport } from "../lib/runExport"
 import { useExport } from "../../../shared/store/useExport"
+import { useToast } from "../../../shared/store/useToast"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
 
@@ -69,8 +69,19 @@ export function Editor() {
 
   // the editor owns Webamp, so it supplies the export runner the dialog calls
   useEffect(() => {
-    useExport.getState().setRunner(runExport)
-    // dev aid for checking the export renderer without decoding a video
+    useExport.getState().setRunner(async (request) => {
+      const state = useExport.getState()
+      if (state.running) return
+      state.setRunning(true)
+      try {
+        const { runExport } = await import("../lib/runExport")
+        await runExport(request)
+      } catch {
+        useToast.getState().show("Export couldn't load. Check your connection and try again.")
+      } finally {
+        state.setRunning(false)
+      }
+    })
     return () => useExport.getState().setRunner(null)
   }, [])
 
