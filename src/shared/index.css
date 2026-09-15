@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Ananias";
+  src: url("/fonts/ananias/Ananias.otf") format("opentype"),
+       url("/fonts/ananias/Ananias.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ananias";
+  src: url("/fonts/ananias/Ananias Bold.otf") format("opentype"),
+       url("/fonts/ananias/Ananias Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* Tokens are roles, not colours. Dark is the default; light flips them. */
+:root {
+  color-scheme: dark;
+  --stage: #FFFFFF; /* export canvas, not chrome: same in both themes */
+  --ink: #0A0A0A;
+  --graphite: #161616;
+  --rule: #2A2A2A;
+  --ash: #8A8A8A;
+  --paper: #F2F2F2;
+  --contrast: #FFFFFF;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --stage: #FFFFFF;
+  --ink: #F5F5F5;
+  --graphite: #E8E8E8;
+  --rule: #D4D4D4;
+  --ash: #6F6F6F;
+  --paper: #0D0D0D;
+  --contrast: #000000;
+}
+
+@theme inline {
+  --color-*: initial;
+  --color-stage: var(--stage);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-rule: var(--rule);
+  --color-ash: var(--ash);
+  --color-paper: var(--paper);
+  --color-contrast: var(--contrast);
+  --color-overlay: rgb(0 0 0 / 0.7);
+
+  --font-sans: "Ananias", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+}
+
+@layer base {
+  body {
+    @apply bg-ink text-paper font-sans;
+  }
+}
+
+/* Scrollbars follow the tokens: thin, rule-coloured thumb, no track. Webamp draws its own. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule) transparent;
+  }
+  *:hover {
+    scrollbar-color: var(--ash) transparent;
+  }
+}
