@@ -94,7 +94,7 @@ export const getWebamp = () => {
       .getState()
       .show(String(message) === "Not supported in Webamp" ? "That action isn't supported here." : String(message))
   instance = new Webamp({
-    initialSkin: { url: templateUrl(DEFAULT_TEMPLATE) },
+    initialSkin: { url: templateUrl(TEMPLATES.find((t) => t.id === useTemplate.getState().id) ?? DEFAULT_TEMPLATE) },
     windowLayout: {
       main: { position: { top: 0, left: 0 } },
       equalizer: { position: { top: 116, left: 0 } },

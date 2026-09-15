@@ -105,10 +105,11 @@ CSS grid on the app root: `grid-template-columns: 280px 1fr 280px; grid-template
 - Left group, gap 12: the logo, then the mono eyebrow `NAME` as a visible `<label>` and the 224px name input. Grouping the name with the logo keeps the right side for actions only.
 - Logo: 40px height (the square mark is illegible much smaller), plain `<img>`, `alt="Playerz"`. `/images/logo.png` (black tile) in dark mode, `/images/logo-light.png` (black marks on transparent) in light mode. No wordmark next to it; the logo is the wordmark.
 - Right group, gap 12: the help button, the theme toggle, then Export.
-- Name field: input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "Untitled video". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
+- Name field: input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "semy-elite". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
+- Social links, centre: TikTok, Instagram, LinkedIn, GitHub and X as brand glyphs, 8px apart. They are anchors wearing `IconButton`'s styling, each `aria-label`led and tooltipped with the network name, opening in a new tab. The only decoration in the bar; they sit between the name field and the controls.
 - Help: `IconButton` with `IconHelp`, `aria-label` "Keyboard shortcuts". Opens the help dialog (§6.7).
 - Theme toggle: `IconButton`, `IconSun` in dark mode and `IconMoon` in light, `aria-label` "Switch to light mode" / "Switch to dark mode".
-- Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Label "Export", icon `IconDownload` left of it. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as Untitled video.mp4".
+- Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Label "Export", icon `IconDownload` left of it. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as semy-elite.mp4".
 - Bottom border 1px `rule`.
 
 ### 6.2 Left sidebar
@@ -160,7 +161,7 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 **BACKGROUND**
 - What sits behind the skin. A `Segmented` control picks Colour, Image or None.
 - Colour: one row with a 36px native colour input styled as a swatch (`border-rule rounded-sm`, no inner chrome) and a mono hex field showing `#RRGGBB` in upper case; the field commits on blur or Enter and reverts anything that is not a 6-digit hex. Default `#FFFFFF`, the `stage` token.
-- None: the frame shows a checkerboard (16px, `rule` over `graphite`, so it follows the theme) the way editing tools signal "nothing here". Only the active mode's controls are shown, so the panel stays short. A Body line in `ash` reads "The video exports with an alpha channel."
+- None: the frame shows a checkerboard (16px, `rule` over `graphite`, so it follows the theme) the way editing tools signal "nothing here". Only the active mode's controls are shown, so the panel stays short. A Body line in `ash` reads "Exports as a transparent WebM video." The checkerboard is preview-only; exports retain the full frame with transparent space around the skin.
 - Image: with none chosen, a `Dropzone` (`image/*`, `IconPhoto`, "Drop an image here."); a rejected file shows "That isn't an image. Choose a PNG, JPG or WEBP." Once set, a card with a 36px thumbnail, the file name truncated and an `IconX` "Remove image", then a `Segmented` for fit: Cover or Contain. The image is kept when switching modes, so it returns. Image backgrounds are opaque and export as MP4.
 - Video backgrounds come later.
 
@@ -179,10 +180,10 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 Opened by the header's Export button. Native `<dialog>`, 440px, `graphite` on the `overlay` backdrop, `rounded-md`.
 - Header 56px: title "Export video" (Ananias 18 bold), `IconX` "Close". Esc and the backdrop close it.
 - Body, gap 24, each group an eyebrow over a `Segmented`:
-  - "Export": **All as one** (the whole playlist as one file named after the project) · **Each track** (one file per track, named after the track) · **Selected**. Selected adds a mono field (placeholder `1-3, 5`) under the control. It is parsed live: `1-3` means 1, 2, 3 and `1,3,5` means 1, 3, 5, in either order, duplicates dropped. Under the field one Body line in `ash` reads "Exports track 2" / "Exports tracks 1, 2, 3 and 5", or the error in `paper`: "Type track numbers, like 1-3 or 1,3,5", "Track 7 doesn't exist. You have 5 tracks.", "Use numbers, commas and dashes only."
+  - "Export", only with more than one track: **All as one** (the whole playlist as one file named after the project) · **Each track** (one file per track, named after the track) · **Selected**. A lone track makes all three mean the same thing, so the group is hidden and the dialog opens on Frame rate; that track exports as one file whatever mode was last chosen. Selected adds a mono field (placeholder `1-3, 5`) under the control. It is parsed live: `1-3` means 1, 2, 3 and `1,3,5` means 1, 3, 5, in either order, duplicates dropped. Under the field one Body line in `ash` reads "Exports track 2" / "Exports tracks 1, 2, 3 and 5", or the error in `paper`: "Type track numbers, like 1-3 or 1,3,5", "Track 7 doesn't exist. You have 5 tracks.", "Use numbers, commas and dashes only."
   - "Frame rate": `30 fps` / `60 fps`.
   - "Resolution": `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels).
-- Notes, Body in `ash`: "Renders in the background; you can keep working." Plus "Transparent backgrounds export over black." while the background is None, and "Add a track to export." while the playlist is empty.
+- Notes, Body in `ash`: "Exports as a transparent WebM video." while the background is None, and "Add a track to export." while the playlist is empty.
 - Footer: ghost "Cancel", primary "Export". Inside the dialog this is the only filled button; the header's is behind the backdrop. Disabled while a run is in progress, with no tracks, or with an invalid selection. Pressing it closes the dialog and starts the run (§6.8).
 ### 6.7 Help dialog
 
@@ -195,9 +196,19 @@ Opened by the header's help button. `Dialog` titled "Keyboard shortcuts", no foo
 
 Export never captures the screen. The skin is drawn again from its own sprite sheets, off the main thread, so a three-minute track renders in the time the encoder needs rather than three minutes.
 - The editor pauses playback, decodes the audio with `OfflineAudioContext`, snapshots the skin's live settings (volume, balance, EQ, visualiser style, shuffle, repeat, open windows) and hands everything to a module worker per file. Up to three workers run at once; more does not help hardware encoders.
-- Each worker unzips the `.wsz` it is given, blits the main, equalizer and playlist windows onto an `OffscreenCanvas` at the editor's zoom rule, draws the frame background (colour, image with cover or contain, black for None), encodes with WebCodecs (H.264 + AAC) and muxes MP4 with `mp4-muxer`. Fidelity is faithful, not pixel-identical: the marquee, digits, position bar, spectrum or oscilloscope, sliders and playlist highlight follow the audio; Webamp's exact visualiser smoothing is not reproduced.
-- Progress uses the Toaster's progress notice (§7): label "Exporting <name>", or "Exporting 2 of 5 · <title>" for multi-file runs, percent = frames done over frames total across every file, and a Cancel link. Each finished file downloads as `<name>.mp4`; the browser asks once before a multi-file run's second download.
-- Outcomes are plain notices: "Export was cancelled.", "That resolution isn't supported here. Try 1080p.", "Export failed.", and, without WebCodecs, "Export needs a recent Chrome, Edge or Safari."
+- Each worker unzips the `.wsz` it is given and blits the main, equalizer and playlist windows onto an `OffscreenCanvas` at the editor's zoom rule. Colour/image backgrounds encode with WebCodecs (H.264 + AAC) and mux to MP4 with `mp4-muxer`. None clears the frame to transparent and uses Mediabunny to encode VP9 with alpha plus Opus audio into WebM. VP9 uses quantizer zero to preserve fully transparent pixels. Black pixels inside the skin stay opaque. Fidelity is faithful, not pixel-identical: the marquee, digits, position bar, spectrum or oscilloscope, sliders and playlist highlight follow the audio; Webamp's exact visualiser smoothing is not reproduced.
+- Progress uses the Toaster's progress notice (§7): label "Exporting <name>", or "Exporting 2 of 5 · <title>" for multi-file runs, percent = frames done over frames total across every file, and a Cancel link. Each finished file downloads as `<name>.mp4` for colour/image or `<name>.webm` for None; the browser asks once before a multi-file run's second download.
+- Outcomes are plain notices: "Export was cancelled.", "That resolution isn't supported here. Try 1080p.", "Export failed.", and, without WebCodecs, "Export needs a recent Chrome, Edge or Safari." Unsupported transparent encoding reports "Transparent WebM export isn't supported here. Try Chrome or Edge, or choose a colour or image background." It never falls back to an opaque export.
+
+Regression check: run `pnpm dev` and open `/src/shared/lib/export/transparency.check.html` in Chrome or Edge. It checks decoded alpha and audio, frame dimensions and duration, compositing over two colours, MP4 output and cancellation.
+
+### 6.9 Session retention
+
+Reload silently restores the project name, chosen template, frame ratio and custom size, skin scale, background colour/image and fit, export settings, and playlist order and names. The selected track returns stopped at 0:00; playback never resumes automatically.
+
+Settings live in localStorage. Audio files and the background image live in IndexedDB, with a playlist manifest linking rows to stored audio. New object URLs are created on reload. Removing a track or image deletes its stored file; startup also prunes orphaned audio without touching the background. Missing audio files are skipped. Unavailable IndexedDB leaves the current session usable without file restoration.
+
+Dialog state, export progress, fullscreen and notices reset. Webamp's volume, balance, EQ, visualiser, shuffle, repeat and window settings return to skin defaults. Restoring those would require additional Webamp dispatches.
 
 ## 7. Components (`src/shared/ui`)
 
@@ -271,6 +282,8 @@ src/
       formatTime.ts      # 125 to 2:05
       formatBytes.ts     # bytes to 2.4 MB
       stripExt.ts        # "track.mp3" to "track"
+      sessionFiles.ts    # IndexedDB audio and background files
+      trackManifest.ts   # saved playlist order, titles and selected track
       presets.ts         # aspect presets, ratioLabel, exportSize
       acceptsFile.ts     # browser-style accept matching
       useElementSize.ts  # ResizeObserver hook

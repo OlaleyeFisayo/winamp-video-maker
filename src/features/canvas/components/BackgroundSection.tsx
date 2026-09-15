@@ -91,9 +91,8 @@ export function BackgroundSection() {
             Drop an image here.
           </Dropzone>
         ))}
-
       {mode === "transparent" && (
-        <p className="text-[15px] leading-normal text-ash">The video exports with an alpha channel.</p>
+        <p className="text-[15px] leading-normal text-ash">Exports as a transparent WebM video.</p>
       )}
     </PanelSection>
   )

@@ -41,7 +41,7 @@ export function Dropzone({ accept, multiple, onFiles, onReject, icon, children, 
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
       className={cn(
-        "flex w-full flex-col items-center gap-2 rounded-sm border border-dashed bg-graphite p-6 text-center text-[15px] leading-[1.5] text-paper transition-colors duration-100",
+        "flex w-full flex-col items-center gap-2 rounded-sm border border-dashed bg-graphite p-6 text-center text-[15px] leading-normal text-paper transition-colors duration-100",
         "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
         error ? "border-paper" : over ? "border-ash" : "border-rule hover:border-ash",
       )}

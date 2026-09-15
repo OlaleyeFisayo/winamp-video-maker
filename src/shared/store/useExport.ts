@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 
 export type Fps = 30 | 60
 /** Short side of the output in pixels: 720p, 1080p, 2K, 4K. */
@@ -26,19 +27,29 @@ type Export = {
   setRunner: (runner: Export["runner"]) => void
 }
 
-export const useExport = create<Export>((set) => ({
-  open: false,
-  fps: 30,
-  resolution: 1080,
-  mode: "all",
-  selection: "",
-  running: false,
-  runner: null,
-  setOpen: (open) => set({ open }),
-  setFps: (fps) => set({ fps }),
-  setResolution: (resolution) => set({ resolution }),
-  setMode: (mode) => set({ mode }),
-  setSelection: (selection) => set({ selection }),
-  setRunning: (running) => set({ running }),
-  setRunner: (runner) => set({ runner }),
-}))
+export const useExport = create<Export>()(
+  persist(
+    (set) => ({
+      open: false,
+      fps: 30,
+      resolution: 1080,
+      mode: "all",
+      selection: "",
+      running: false,
+      runner: null,
+      setOpen: (open) => set({ open }),
+      setFps: (fps) => set({ fps }),
+      setResolution: (resolution) => set({ resolution }),
+      setMode: (mode) => set({ mode }),
+      setSelection: (selection) => set({ selection }),
+      setRunning: (running) => set({ running }),
+      setRunner: (runner) => set({ runner }),
+    }),
+    {
+      name: "playerz-export",
+      // settings only: a reload mid-run must not come back with the button stuck disabled,
+      // and `selection` indexes a playlist that may no longer match
+      partialize: (s) => ({ fps: s.fps, resolution: s.resolution, mode: s.mode }),
+    },
+  ),
+)

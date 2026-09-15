@@ -1,14 +1,37 @@
-import { IconDownload, IconHelp, IconMoon, IconSun } from "@tabler/icons-react"
+import {
+  IconBrandGithub,
+  IconBrandInstagram,
+  IconBrandLinkedin,
+  IconBrandTiktok,
+  IconBrandX,
+  IconDownload,
+  IconHelp,
+  IconMoon,
+  IconSun,
+} from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useExport } from "../../../shared/store/useExport"
 import { useHelp } from "../../../shared/store/useHelp"
-import { useProject } from "../../../shared/store/useProject"
+import { DEFAULT_NAME, useProject } from "../../../shared/store/useProject"
 import { useTheme } from "../../../shared/store/useTheme"
+
+const LINKS = [
+  { label: "TikTok", href: "https://www.tiktok.com/@semyelite", Icon: IconBrandTiktok },
+  { label: "Instagram", href: "https://www.instagram.com/omo.its.semy", Icon: IconBrandInstagram },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/olaleyefisayo/", Icon: IconBrandLinkedin },
+  { label: "GitHub", href: "https://github.com/OlaleyeFisayo", Icon: IconBrandGithub },
+  { label: "X", href: "https://x.com/semyelite", Icon: IconBrandX },
+]
+
+// ponytail: IconButton renders a <button>, so the links borrow its classes rather than
+// making it polymorphic for five anchors
+const linkClass =
+  "inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-ash transition-colors duration-100 hover:border-rule hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
 
 const exportHint = (canExport: boolean, name: string) => {
   if (!canExport) return "Add audio to export"
-  if (!name.trim()) return "Exports as Untitled video.mp4"
+  if (!name.trim()) return `Exports as ${DEFAULT_NAME}.mp4`
   return undefined
 }
 
@@ -32,9 +55,24 @@ export function Header() {
           id="video-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Untitled video"
+          placeholder={DEFAULT_NAME}
           className="h-9 w-56 rounded-sm border border-rule bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
         />
+      </div>
+      <div className="flex items-center gap-1">
+        {LINKS.map(({ label, href, Icon }) => (
+          <a
+            key={label}
+            href={href}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label={label}
+            title={label}
+            className={linkClass}
+          >
+            <Icon size={16} stroke={1.5} aria-hidden />
+          </a>
+        ))}
       </div>
       <div className="flex items-center gap-3">
         <IconButton aria-label="Keyboard shortcuts" onClick={() => openHelp(true)}>

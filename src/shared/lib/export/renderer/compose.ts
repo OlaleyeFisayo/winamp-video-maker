@@ -38,6 +38,10 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
 
   const drawBackground = (ctx: OffscreenCanvasRenderingContext2D) => {
     const b = scene.background
+    if (b.mode === "transparent") {
+      ctx.clearRect(0, 0, scene.width, scene.height)
+      return
+    }
     ctx.fillStyle = b.mode === "color" ? b.color : "#000000"
     ctx.fillRect(0, 0, scene.width, scene.height)
     if (b.mode === "image" && b.image) {

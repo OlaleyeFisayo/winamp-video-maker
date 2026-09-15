@@ -1,6 +1,12 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
+import { deleteFile, getFile, putFile } from "../lib/sessionFiles"
 
 const HEX = /^#[0-9a-f]{6}$/i
+let imageRevision = 0
+
+/** Key the background image lives under in the session file store. */
+export const IMAGE_KEY = "background"
 
 export type BackgroundMode = "color" | "image" | "transparent"
 export type Fit = "cover" | "contain"
@@ -23,25 +29,48 @@ type Canvas = {
   setFit: (fit: Fit) => void
 }
 
-export const useCanvas = create<Canvas>((set) => ({
-  scale: 0.5,
-  mode: "color",
-  color: "#FFFFFF",
-  image: null,
-  imageName: null,
-  fit: "cover",
-  setScale: (scale) => set({ scale: Math.min(1, Math.max(0.1, scale)) }),
-  setMode: (mode) => set({ mode }),
-  setColor: (hex) => {
-    if (HEX.test(hex)) set({ color: hex.toUpperCase() })
-  },
-  setImage: (file) =>
-    set((s) => {
-      // the previous blob is ours to release; nothing else holds a reference
-      if (s.image) URL.revokeObjectURL(s.image)
-      return file
-        ? { image: URL.createObjectURL(file), imageName: file.name }
-        : { image: null, imageName: null }
+export const useCanvas = create<Canvas>()(
+  persist(
+    (set) => ({
+      scale: 0.5,
+      mode: "color",
+      color: "#FFFFFF",
+      image: null,
+      imageName: null,
+      fit: "cover",
+      setScale: (scale) => set({ scale: Math.min(1, Math.max(0.1, scale)) }),
+      setMode: (mode) => set({ mode }),
+      setColor: (hex) => {
+        if (HEX.test(hex)) set({ color: hex.toUpperCase() })
+      },
+      setImage: (file) => {
+        imageRevision++
+        set((s) => {
+          // the previous blob is ours to release; nothing else holds a reference
+          if (s.image) URL.revokeObjectURL(s.image)
+          // keep the bytes too, so the image survives a reload
+          void (file ? putFile(IMAGE_KEY, file) : deleteFile(IMAGE_KEY))
+          return file
+            ? { image: URL.createObjectURL(file), imageName: file.name }
+            : { image: null, imageName: null }
+        })
+      },
+      setFit: (fit) => set({ fit }),
     }),
-  setFit: (fit) => set({ fit }),
-}))
+    {
+      name: "playerz-canvas",
+      // the image is bytes, not JSON: it lives in the session file store and comes back
+      // through restoreBackground below
+      partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit }),
+    },
+  ),
+)
+
+/** Re-attaches the stored background image after a reload. Safe to call more than once. */
+export const restoreBackground = async () => {
+  if (useCanvas.getState().image) return
+  const revision = imageRevision
+  const stored = await getFile(IMAGE_KEY)
+  if (!(stored?.blob instanceof Blob) || revision !== imageRevision || useCanvas.getState().image) return
+  useCanvas.setState({ image: URL.createObjectURL(stored.blob), imageName: stored.name })
+}

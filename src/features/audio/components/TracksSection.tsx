@@ -85,7 +85,8 @@ export function TracksSection() {
   const onPick = (files: File[]) => {
     setSkipped(false)
     if (!files.length) return
-    enqueue({ type: "add", files })
+    const ids = files.map(() => crypto.randomUUID())
+    enqueue({ type: "add", files, ids })
     const project = useProject.getState()
     if (!project.name.trim()) project.setName(stripExt(files[0].name))
   }
