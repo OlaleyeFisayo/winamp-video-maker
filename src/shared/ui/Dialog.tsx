@@ -26,7 +26,7 @@ export function Dialog({ open, onClose, title, children, footer }: Props) {
       ref={ref}
       onClose={onClose}
       aria-labelledby="dialog-title"
-      className="m-auto w-[440px] max-w-[calc(100vw-32px)] rounded-md border border-rule bg-graphite p-0 text-paper backdrop:bg-overlay"
+      className="m-auto w-110 max-w-[calc(100vw-32px)] rounded-md border border-rule bg-graphite p-0 text-paper backdrop:bg-overlay"
     >
       <div className="flex h-14 items-center justify-between border-b border-rule pl-6 pr-3">
         <h2 id="dialog-title" className="text-[18px] font-bold leading-[1.3]">

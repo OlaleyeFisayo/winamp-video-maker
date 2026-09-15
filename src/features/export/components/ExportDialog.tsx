@@ -12,8 +12,8 @@ const MODES = [
 ] as const
 
 const FPS = [
-  { value: "30", label: "30 fps" },
-  { value: "60", label: "60 fps" },
+  { value: "30", label: "30" },
+  { value: "60", label: "60" },
 ] as const
 
 const RES = [
@@ -33,16 +33,20 @@ export function ExportDialog() {
   const transparent = useCanvas((s) => s.mode === "transparent")
   const [touched, setTouched] = useState(false)
 
-  const parsed = mode === "selected" ? parseSelection(selection, tracks.length) : null
+  // One track makes every mode mean the same thing, so the row is hidden — and a mode left
+  // over from a larger playlist must not drive the run or block the button while invisible.
+  const multi = tracks.length > 1
+  const effectiveMode: ExportMode = multi ? mode : "all"
+
+  const parsed = effectiveMode === "selected" ? parseSelection(selection, tracks.length) : null
   const selectionError = parsed?.error
   const canExport = !running && tracks.length > 0 && !selectionError && !!runner
 
   const start = () => {
     if (!canExport) return
-    const indices =
-      mode === "all" ? tracks.map((_, i) => i + 1) : mode === "each" ? tracks.map((_, i) => i + 1) : parsed!.indices!
+    const indices = effectiveMode === "selected" ? parsed!.indices! : tracks.map((_, i) => i + 1)
     setOpen(false)
-    void runner!({ mode, indices, fps, resolution })
+    void runner!({ mode: effectiveMode, indices, fps, resolution })
   }
 
   return (
@@ -59,32 +63,34 @@ export function ExportDialog() {
         </>
       }
     >
-      <div className="flex flex-col gap-2">
-        <Eyebrow>Export</Eyebrow>
-        <Segmented options={MODES} value={mode} onChange={(v: ExportMode) => setMode(v)} aria-label="What to export" />
-        {mode === "selected" && (
-          <>
-            <input
-              aria-label="Tracks to export"
-              value={selection}
-              placeholder="1-3, 5"
-              spellCheck={false}
-              onChange={(e) => {
-                setSelection(e.target.value)
-                setTouched(true)
-              }}
-              className={field}
-            />
-            <p className={`text-[15px] leading-normal ${selectionError ? "text-paper" : "text-ash"}`}>
-              {selectionError
-                ? touched || selection
-                  ? selectionError
-                  : "Type track numbers, like 1-3 or 1,3,5"
-                : `Exports ${parsed!.indices!.length === 1 ? "track" : "tracks"} ${describeSelection(parsed!.indices!)}`}
-            </p>
-          </>
-        )}
-      </div>
+      {multi && (
+        <div className="flex flex-col gap-2">
+          <Eyebrow>Export</Eyebrow>
+          <Segmented options={MODES} value={mode} onChange={(v: ExportMode) => setMode(v)} aria-label="What to export" />
+          {mode === "selected" && (
+            <>
+              <input
+                aria-label="Tracks to export"
+                value={selection}
+                placeholder="1-3, 5"
+                spellCheck={false}
+                onChange={(e) => {
+                  setSelection(e.target.value)
+                  setTouched(true)
+                }}
+                className={field}
+              />
+              <p className={`text-[15px] leading-normal ${selectionError ? "text-paper" : "text-ash"}`}>
+                {selectionError
+                  ? touched || selection
+                    ? selectionError
+                    : "Type track numbers, like 1-3 or 1,3,5"
+                  : `Exports ${parsed!.indices!.length === 1 ? "track" : "tracks"} ${describeSelection(parsed!.indices!)}`}
+              </p>
+            </>
+          )}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <Eyebrow>Frame rate</Eyebrow>
         <Segmented options={FPS} value={String(fps)} onChange={(v) => setFps(Number(v) as Fps)} aria-label="Frame rate" />
@@ -99,8 +105,7 @@ export function ExportDialog() {
         />
       </div>
       <div className="flex flex-col gap-1 text-[15px] leading-normal text-ash">
-        <p>Renders in the background; you can keep working.</p>
-        {transparent && <p>Transparent backgrounds export over black.</p>}
+        {transparent && <p>Exports as a transparent WebM video.</p>}
         {tracks.length === 0 && <p>Add a track to export.</p>}
       </div>
     </Dialog>

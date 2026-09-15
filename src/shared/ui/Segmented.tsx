@@ -41,7 +41,7 @@ export function Segmented<V extends string>({ options, value, onChange, classNam
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
-              "h-7 flex-1 rounded-[2px] border px-1 font-mono text-[12px] leading-none transition-colors duration-100",
+              "h-7 flex-1 rounded-xs border px-1 font-mono text-[12px] leading-none transition-colors duration-100",
               "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
               selected ? "border-contrast text-paper" : "border-transparent text-ash hover:text-paper",
             )}

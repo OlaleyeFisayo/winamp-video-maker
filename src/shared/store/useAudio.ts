@@ -7,7 +7,8 @@ export type Status = "PLAYING" | "STOPPED" | "PAUSED"
 
 /** Intent from the UI; the editor owns Webamp and applies these. */
 export type Command =
-  | { type: "add"; files: File[] }
+  /** `ids` names the session-file record each file was stored under, in the same order. */
+  | { type: "add"; files: File[]; ids: string[] }
   | { type: "remove"; index: number }
   | { type: "play"; index: number }
   | { type: "rename"; index: number; title: string }

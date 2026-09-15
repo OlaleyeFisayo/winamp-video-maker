@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Webamp from "webamp"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
@@ -9,8 +9,10 @@ import { usePreview } from "../../../shared/store/usePreview"
 import { TEMPLATES } from "../../../shared/lib/templates"
 import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
+import { putFile } from "../../../shared/lib/sessionFiles"
 import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
+import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { runExport } from "../lib/runExport"
 import { useExport } from "../../../shared/store/useExport"
 import { Timeline } from "./Timeline"
@@ -50,6 +52,7 @@ export function Editor() {
   const section = useRef<HTMLElement>(null)
   const frame = useRef<HTMLDivElement>(null)
   const commands = useAudio((s) => s.commands)
+  const [sessionReady, setSessionReady] = useState(false)
   const { width, height } = useFrame(frameSize)
   const { scale, mode, color, image, fit } = useCanvas()
   const templateId = useTemplate((s) => s.id)
@@ -95,7 +98,7 @@ export function Editor() {
     if (!template) return
     const first = loadedTemplate.current === null
     loadedTemplate.current = templateId
-    // the constructor already loads the default skin, so on the first pass only warm the picker
+    // the constructor loads the saved skin, so on the first pass only warm the picker
     void (first ? prefetchSkins() : loadSkin(template))
   }, [templateId])
 
@@ -107,17 +110,27 @@ export function Editor() {
       const main = document.querySelector("#webamp #main-window")
       const cursor = main ? getComputedStyle(main).cursor : ""
       if (section.current && cursor.startsWith("url")) section.current.style.cursor = cursor
+      void restoreSession(webamp).then(() => {
+        saveSession(webamp, getCurrentIndex())
+        setSessionReady(true)
+      })
     })
     const store = useAudio.getState()
     const unsubState = webamp.__onStateChange(() => {
       const next = readPlaylist(webamp)
       const state = useAudio.getState()
-      if (!same(state.tracks, next)) store.setTracks(next)
+      const tracksChanged = !same(state.tracks, next)
+      if (tracksChanged) store.setTracks(next)
       const status = webamp.getMediaStatus()
       if (status !== state.status) store.setStatus(status)
       const time = getElapsed()
       if (time !== state.time) store.setTime(time)
       const index = getCurrentIndex()
+      if (tracksChanged || index !== state.current) {
+        // append registers file IDs after dispatch; removal briefly empties the playlist.
+        // Save the completed mutation, never one of those intermediate states.
+        queueMicrotask(() => saveSession(webamp, getCurrentIndex()))
+      }
       if (index !== state.current) {
         store.setCurrent(index)
         if (index !== null) revealTrack(index, next.length)
@@ -140,7 +153,7 @@ export function Editor() {
   }, [])
 
   useEffect(() => {
-    if (!supported || commands.length === 0) return
+    if (!supported || !sessionReady || commands.length === 0) return
     const webamp = getWebamp()
     for (const c of commands) {
       const tracks = readPlaylist(webamp)
@@ -152,8 +165,11 @@ export function Editor() {
         webamp.setCurrentTrack(tracks[to].id)
       }
       if (c.type === "add") {
+        // Wait until restore/pruning finishes before saving newly uploaded files.
+        c.files.forEach((file, i) => void putFile(c.ids[i], file))
         // append only: adding never starts playback
         webamp.appendTracks(c.files.map(toBlobTrack))
+        trackAppended(webamp, c.ids)
       } else if (c.type === "remove") {
         // rebuild without setTracksToPlay so nothing auto-plays; resume the same track if it was playing
         const wasPlaying = webamp.getMediaStatus() === "PLAYING" && current !== null && current !== c.index
@@ -210,7 +226,7 @@ export function Editor() {
       }
     }
     useAudio.getState().clearCommands()
-  }, [commands])
+  }, [commands, sessionReady])
 
   if (!supported) {
     return (

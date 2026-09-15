@@ -2,7 +2,7 @@ import { useAudio } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
 import { useExport, type ExportRequest } from "../../../shared/store/useExport"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
-import { useProject } from "../../../shared/store/useProject"
+import { DEFAULT_NAME, useProject } from "../../../shared/store/useProject"
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { useToast } from "../../../shared/store/useToast"
 import { exportSize } from "../../../shared/lib/presets"
@@ -12,6 +12,8 @@ import { snapshotSkinState } from "./webamp"
 
 const supported = () =>
   typeof VideoEncoder !== "undefined" && typeof AudioEncoder !== "undefined" && typeof OfflineAudioContext !== "undefined"
+
+const TRANSPARENCY_ERROR = "Transparent WebM export isn't supported here. Try Chrome or Edge, or choose a colour or image background."
 
 // characters Windows and macOS refuse in file names; the backslash is built by code to dodge escaping
 const BAD_CHARS = new RegExp(`[${"\\"}/:*?"<>|]+`, "g")
@@ -32,7 +34,7 @@ type Segment = { name: string; trackIndices: number[] }
 export const runExport = async (req: ExportRequest) => {
   const toast = useToast.getState()
   if (!supported()) {
-    toast.show("Export needs a recent Chrome, Edge or Safari.")
+    toast.show(useCanvas.getState().mode === "transparent" ? TRANSPARENCY_ERROR : "Export needs a recent Chrome, Edge or Safari.")
     return
   }
   const audio = useAudio.getState()
@@ -52,7 +54,7 @@ export const runExport = async (req: ExportRequest) => {
   }
 
   try {
-    const project = useProject.getState().name.trim() || "Untitled video"
+    const project = useProject.getState().name.trim() || DEFAULT_NAME
     const segments: Segment[] =
       req.mode === "all"
         ? [{ name: project, trackIndices: req.indices.map((n) => n - 1) }]
@@ -105,7 +107,7 @@ export const runExport = async (req: ExportRequest) => {
             done.set(index, m.frames)
             report()
           } else if (m.type === "done") {
-            if (!cancelled) download(new Blob([m.buffer], { type: "video/mp4" }), `${safeName(seg.name)}.mp4`)
+            if (!cancelled) download(new Blob([m.buffer], { type: `video/${m.format}` }), `${safeName(seg.name)}.${m.format}`)
             worker.terminate()
             resolve()
           } else if (m.type === "cancelled") {
@@ -145,6 +147,7 @@ export const runExport = async (req: ExportRequest) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg === "cancelled") toast.show("Export was cancelled.")
+    else if (msg === "transparency") toast.show(TRANSPARENCY_ERROR)
     else if (msg === "resolution") toast.show("That resolution isn't supported here. Try 1080p.")
     else toast.show("Export failed.")
   } finally {
