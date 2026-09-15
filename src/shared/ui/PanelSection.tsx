@@ -21,7 +21,7 @@ export function PanelSection({ title, action, collapsible, children }: Props) {
   return (
     <details open className={`group ${divider}`}>
       <summary className="flex h-8 cursor-pointer list-none items-center justify-between rounded-sm focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center gap-2">
+        <span className="flex items-center gap-2 justify-between w-full">
           <Eyebrow>{title}</Eyebrow>
           <IconChevronDown
             size={16}
