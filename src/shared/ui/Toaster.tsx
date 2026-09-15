@@ -18,7 +18,18 @@ export function Toaster() {
         <div className={`${card} w-72 px-4 py-3`}>
           <div className="flex items-center justify-between gap-3">
             <span className="min-w-0 truncate">{progress.label}</span>
-            <span className="shrink-0 font-mono text-[13px] text-ash">{Math.round(progress.percent)}%</span>
+            <span className="flex shrink-0 items-center gap-3">
+              <span className="font-mono text-[13px] text-ash">{Math.round(progress.percent)}%</span>
+              {progress.onCancel && (
+                <button
+                  type="button"
+                  onClick={progress.onCancel}
+                  className="text-[13px] leading-none text-ash underline-offset-2 hover:text-paper hover:underline focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+                >
+                  Cancel
+                </button>
+              )}
+            </span>
           </div>
           <div
             role="progressbar"

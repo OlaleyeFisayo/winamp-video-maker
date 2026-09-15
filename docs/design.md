@@ -108,7 +108,7 @@ CSS grid on the app root: `grid-template-columns: 280px 1fr 280px; grid-template
 - Name field: input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "Untitled video". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
 - Help: `IconButton` with `IconHelp`, `aria-label` "Keyboard shortcuts". Opens the help dialog (§6.7).
 - Theme toggle: `IconButton`, `IconSun` in dark mode and `IconMoon` in light, `aria-label` "Switch to light mode" / "Switch to dark mode".
-- Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Icon `IconDownload` left of the label. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as Untitled video.mp4".
+- Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Label "Export", icon `IconDownload` left of it. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as Untitled video.mp4".
 - Bottom border 1px `rule`.
 
 ### 6.2 Left sidebar
@@ -176,17 +176,28 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 
 ### 6.6 Export dialog
 
-Opened by the header's Export button (enabled once a track is loaded). Native `<dialog>`, 440px, `graphite` on the `overlay` backdrop, `rounded-md`.
+Opened by the header's Export button. Native `<dialog>`, 440px, `graphite` on the `overlay` backdrop, `rounded-md`.
 - Header 56px: title "Export video" (Ananias 18 bold), `IconX` "Close". Esc and the backdrop close it.
-- Body, gap 24: eyebrow "Frame rate" over a `Segmented` of `30 fps` / `60 fps`; eyebrow "Resolution" over a `Segmented` of `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels). Then one Body line in `ash` with the numbers in mono `paper`: "Exports 1920 × 1080 at 30 fps as <name>.mp4". The extension follows the Background: `.webm` while transparent, since MP4 carries no alpha.
-- Footer: ghost "Cancel", primary "Export video". Inside the dialog this is the only filled button; the header's is behind the backdrop.
-
+- Body, gap 24, each group an eyebrow over a `Segmented`:
+  - "Export": **All as one** (the whole playlist as one file named after the project) · **Each track** (one file per track, named after the track) · **Selected**. Selected adds a mono field (placeholder `1-3, 5`) under the control. It is parsed live: `1-3` means 1, 2, 3 and `1,3,5` means 1, 3, 5, in either order, duplicates dropped. Under the field one Body line in `ash` reads "Exports track 2" / "Exports tracks 1, 2, 3 and 5", or the error in `paper`: "Type track numbers, like 1-3 or 1,3,5", "Track 7 doesn't exist. You have 5 tracks.", "Use numbers, commas and dashes only."
+  - "Frame rate": `30 fps` / `60 fps`.
+  - "Resolution": `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels).
+- Notes, Body in `ash`: "Renders in the background; you can keep working." Plus "Transparent backgrounds export over black." while the background is None, and "Add a track to export." while the playlist is empty.
+- Footer: ghost "Cancel", primary "Export". Inside the dialog this is the only filled button; the header's is behind the backdrop. Disabled while a run is in progress, with no tracks, or with an invalid selection. Pressing it closes the dialog and starts the run (§6.8).
 ### 6.7 Help dialog
 
 Opened by the header's help button. `Dialog` titled "Keyboard shortcuts", no footer; the X and Esc close it.
 - Body: a `<dl>` of rows, each `flex items-center justify-between`: the action in UI type `paper` on the left, the key on the right as a 28px `<kbd>` `border-rule bg-graphite rounded-sm` in Data mono `paper`.
 - Shortcuts: **K** Play or pause · **J** Previous track · **L** Next track · **F** Fullscreen preview. The list is generated from the same `SHORTCUTS` table the key handler uses, so the dialog can never drift from the behaviour.
 - Shortcuts are ignored while typing in an input, textarea, select or contenteditable, and when Ctrl, Cmd or Alt is held.
+
+### 6.8 Export run
+
+Export never captures the screen. The skin is drawn again from its own sprite sheets, off the main thread, so a three-minute track renders in the time the encoder needs rather than three minutes.
+- The editor pauses playback, decodes the audio with `OfflineAudioContext`, snapshots the skin's live settings (volume, balance, EQ, visualiser style, shuffle, repeat, open windows) and hands everything to a module worker per file. Up to three workers run at once; more does not help hardware encoders.
+- Each worker unzips the `.wsz` it is given, blits the main, equalizer and playlist windows onto an `OffscreenCanvas` at the editor's zoom rule, draws the frame background (colour, image with cover or contain, black for None), encodes with WebCodecs (H.264 + AAC) and muxes MP4 with `mp4-muxer`. Fidelity is faithful, not pixel-identical: the marquee, digits, position bar, spectrum or oscilloscope, sliders and playlist highlight follow the audio; Webamp's exact visualiser smoothing is not reproduced.
+- Progress uses the Toaster's progress notice (§7): label "Exporting <name>", or "Exporting 2 of 5 · <title>" for multi-file runs, percent = frames done over frames total across every file, and a Cancel link. Each finished file downloads as `<name>.mp4`; the browser asks once before a multi-file run's second download.
+- Outcomes are plain notices: "Export was cancelled.", "That resolution isn't supported here. Try 1080p.", "Export failed.", and, without WebCodecs, "Export needs a recent Chrome, Edge or Safari."
 
 ## 7. Components (`src/shared/ui`)
 
@@ -202,7 +213,7 @@ Every primitive accepts `className` and forwards native props. They are styled o
 | `Dropzone` | `idle`, `over`, `error` | A `<button>` that opens the native picker and accepts drops. Dashed border `rule`, `ash` on drag-over, `paper` on error. Renders an icon, a Body line, "Browse files", and the caller's error text underlined. Filters by `accept` (`multiple` optional); calls `onFiles` with the matches and `onReject` if any were dropped. |
 | native `<input type="color">` / `<input type="range">` | – | Pickers stay native, styled with tokens (`accent-contrast`, `border-rule` swatch). No picker library. |
 | `Segmented` | – | One-line radiogroup of equal segments, mono 12. Selected segment has a `contrast` border, never a fill. Arrow keys. Used for ratio, frame rate, resolution. |
-| `Toaster` | text, progress | Top-centre stack, `graphite` on `rule`, 120 ms fade in. Text notices are one line and clear after 3 s or on X; Webamp's native alerts are routed here. A progress notice persists while a job runs: label, a mono percentage, and a 2px `rule` track with a `contrast` fill, with `role="progressbar"` carrying the value. |
+| `Toaster` | text, progress | Top-centre stack, `graphite` on `rule`, 120 ms fade in. Text notices are one line and clear after 3 s or on X; Webamp's native alerts are routed here. A progress notice persists while a job runs: label, a mono percentage, an optional `link` Button "Cancel", and a 2px `rule` track with a `contrast` fill, with `role="progressbar"` carrying the value. |
 | `Dialog` | – | Native `<dialog>` with `showModal`, so focus trap, Esc and the `overlay` backdrop come from the browser. Title row, body, optional footer. |
 | `Field` | – | Label (UI type) over a `graphite` input with `border-rule`, `rounded-sm`, height 36. |
 | `Swatches` | – | Row of 20×20 squares, `contrast` outline on the selected one. |
@@ -223,7 +234,7 @@ Almost nothing moves in the shell. The skin's own visualiser is the motion on th
 
 Words exist to make the tool easier to use. Sentence case everywhere. Plain verbs. Present tense. No exclamation marks, no emoji, no marketing adjectives.
 
-- Buttons name the result: "Export video", "Add audio", "Change template", "Use this template", "Browse files", "Remove audio". A name stays the same through the whole flow: the button says "Export video", the progress toast says "Exporting video", the finished toast says "Video exported".
+- Buttons name the result: "Export", "Add tracks", "Use this template", "Browse files", "Remove track". A name stays the same through the whole flow: the button says "Export", the dialog's primary says "Export", the progress notice says "Exporting <name>".
 - Empty states tell the person what to do: "No audio yet. Drop an MP3 or WAV here." "Add a track to hear the skin play."
 - Errors state the cause and the fix in that order: "This file isn't a Winamp skin. Choose a .wsz file." Never "Oops" or "Something went wrong".
 - Shortcut labels in the help dialog are plain verb phrases naming the action ("Play or pause"), never "Press K to…"; the key cap beside them says which key.
@@ -254,28 +265,30 @@ src/
     ui/                  # primitives listed in section 7, one file each, barrel index.ts
     layout/
       AppShell.tsx       # header / left / stage / right grid
-    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, status, time, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useHelp (dialog open), useCanvas (skin scale, frame colour), useTemplate (chosen skin, thumbnails), usePreview (fullscreen), useToast (notices)
+    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, status, time, commands), useFrame (ratio, custom size), useExport (dialog open, mode, selection, fps, resolution, running, runner registered by the editor), useHelp (dialog open), useCanvas (skin scale, frame colour), useTemplate (chosen skin, thumbnails, archive blob URL), usePreview (fullscreen), useToast (notices)
     lib/
       cn.ts              # class joiner
-      formatTime.ts      # seconds to mm:ss
+      formatTime.ts      # 125 to 2:05
       formatBytes.ts     # bytes to 2.4 MB
       stripExt.ts        # "track.mp3" to "track"
-      formatTime.ts      # 125 to 2:05
       presets.ts         # aspect presets, ratioLabel, exportSize
       acceptsFile.ts     # browser-style accept matching
       useElementSize.ts  # ResizeObserver hook
       templates.ts       # the bundled skin catalogue
+      zip.ts             # readEntries: inflates named files out of a .wsz (main thread and workers)
       skinThumb.ts       # reads main.bmp out of a .wsz for the picker
+      export/
+        audio.ts         # decodeTrack via OfflineAudioContext, transferables
+        export.worker.ts # renders + encodes one file: WebCodecs, mp4-muxer
+        renderer/        # sprites (skin coordinates), skin (sheets from the .wsz), windows (main/eq/playlist), vis (FFT), compose
   features/
-    templates/           # TemplateSection, TemplateModal, TemplateCard, useSkins, parseWsz
+    templates/           # TemplateSection (skin picker with thumbnails)
     audio/               # TracksSection (playlist with Add tracks)
     canvas/              # SizeSection (skin scale), BackgroundSection (frame colour)
-    templates/           # TemplateSection (skin picker)
-    background/          # BackgroundSection, useBackground
-    editor/              # Editor, Transport, Timeline, lib/webamp.ts (singleton, lock, rename, reveal, elapsed), lib/useShortcuts.ts
+    editor/              # Editor, Transport, Timeline, lib/webamp.ts (singleton, lock, rename, reveal, elapsed, snapshotSkinState, loadSkin), lib/useShortcuts.ts, lib/runExport.ts (segments, workers, downloads)
     help/                # HelpDialog (keyboard shortcuts)
     frame/               # FrameSection (ratio segmented control, custom size)
-    export/              # ExportDialog (frame rate, resolution)
+    export/              # ExportDialog (mode, selection, frame rate, resolution), lib/parseSelection.ts
 ```
 
 Rules:
