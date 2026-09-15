@@ -3,7 +3,11 @@ import { useToast } from "../../../shared/store/useToast"
 
 type Action = { type: string; absolute?: boolean }
 type Dispatch = (action: object) => unknown
-type Middleware = (store: { dispatch: Dispatch }) => (next: (a: Action) => unknown) => (action: Action) => unknown
+type GetState = () => {
+  media?: { timeElapsed?: number }
+  playlist?: { trackOrder: number[]; currentTrack: number | null }
+}
+type Middleware = (store: { dispatch: Dispatch; getState: GetState }) => (next: (a: Action) => unknown) => (action: Action) => unknown
 
 /**
  * Lets the initial layout and the one-time centring through, then drops every
@@ -23,9 +27,22 @@ const lockWindows = (): Middleware => {
 
 // ponytail: no public rename API; the middleware hands us the store dispatch
 let dispatch: Dispatch | undefined
+let getState: GetState | undefined
 const captureStore: Middleware = (store) => {
   dispatch = store.dispatch
+  getState = store.getState
   return (next) => (action) => next(action)
+}
+
+/** Seconds elapsed in the current track. */
+export const getElapsed = () => getState?.().media?.timeElapsed ?? 0
+
+/** Index of the current track in playlist order, kept through pause and stop; null when none. */
+export const getCurrentIndex = () => {
+  const pl = getState?.().playlist
+  if (!pl || pl.currentTrack === null) return null
+  const i = pl.trackOrder.indexOf(pl.currentTrack)
+  return i < 0 ? null : i
 }
 
 /**
@@ -72,3 +89,6 @@ export const getWebamp = () => {
 
 /** Renders into `node` the first time only; StrictMode double effects reuse the same promise. */
 export const renderOnce = (node: HTMLElement) => (rendered ??= getWebamp().renderInto(node))
+
+/** Empties the skin playlist without touching playback state; used to rebuild it after a removal. */
+export const clearPlaylist = () => dispatch?.({ type: "REMOVE_ALL_TRACKS" })

@@ -50,7 +50,7 @@ export function ExportDialog() {
           aria-label="Resolution"
         />
       </div>
-      <p className="text-[15px] leading-[1.5] text-ash">
+      <p className="text-[15px] leading-normal text-ash">
         Exports <span className="font-mono text-[13px] text-paper">{size.width} × {size.height}</span> at{" "}
         <span className="font-mono text-[13px] text-paper">{fps} fps</span> as {name}.mp4
       </p>
