@@ -1,8 +1,5 @@
 import { Button, Dialog, Eyebrow, Segmented } from "../../../shared/ui"
 import { useExport, type Fps, type Resolution } from "../../../shared/store/useExport"
-import { frameSize, useFrame } from "../../../shared/store/useFrame"
-import { useProject } from "../../../shared/store/useProject"
-import { exportSize } from "../../../shared/lib/presets"
 
 const FPS = [
   { value: "30", label: "30 fps" },
@@ -18,9 +15,6 @@ const RES = [
 
 export function ExportDialog() {
   const { open, fps, resolution, setOpen, setFps, setResolution } = useExport()
-  const ratio = useFrame(frameSize)
-  const name = useProject((s) => s.name.trim() || "Untitled video")
-  const size = exportSize(ratio, resolution)
 
   return (
     <Dialog
@@ -50,10 +44,6 @@ export function ExportDialog() {
           aria-label="Resolution"
         />
       </div>
-      <p className="text-[15px] leading-normal text-ash">
-        Exports <span className="font-mono text-[13px] text-paper">{size.width} × {size.height}</span> at{" "}
-        <span className="font-mono text-[13px] text-paper">{fps} fps</span> as {name}.mp4
-      </p>
     </Dialog>
   )
 }
