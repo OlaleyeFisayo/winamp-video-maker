@@ -1,6 +1,7 @@
 import "./shared/store/useTheme"
 import { Header } from "./features/header"
 import { TracksSection } from "./features/audio"
+import { TemplateSection } from "./features/templates"
 import { Editor } from "./features/editor"
 import { FrameSection } from "./features/frame"
 import { BackgroundSection, SizeSection } from "./features/canvas"
@@ -14,6 +15,7 @@ function App() {
       <div className="grid h-dvh grid-cols-[280px_1fr_280px] grid-rows-[56px_1fr]">
         <Header />
         <Panel side="left">
+          <TemplateSection />
           <TracksSection />
         </Panel>
         <Editor />
