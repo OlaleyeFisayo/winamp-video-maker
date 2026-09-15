@@ -6,7 +6,12 @@ export function HelpDialog() {
   const { open, setOpen } = useHelp()
 
   return (
-    <Dialog open={open} onClose={() => setOpen(false)} title="Keyboard shortcuts">
+    <Dialog open={open} onClose={() => setOpen(false)} title="About and keyboard shortcuts">
+      <section className="flex flex-col gap-2 text-[15px] leading-normal">
+        <h3 className="text-paper">winamp-video-maker</h3>
+        <p className="text-ash">Turn audio into Winamp-style videos with classic skins, animated visualizers, custom backgrounds, and flexible export settings.</p>
+        <p className="text-ash">By Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite.</p>
+      </section>
       <dl className="flex flex-col gap-3">
         {SHORTCUTS.map((s) => (
           <div key={s.key} className="flex items-center justify-between">

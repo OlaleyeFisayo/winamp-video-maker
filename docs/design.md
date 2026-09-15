@@ -1,16 +1,16 @@
-# Playerz design system
+# winamp-video-maker design system
 
-This is the single source of truth for how Playerz looks, reads, moves and is organised in code. Anyone (human or AI) building UI in this repo follows it exactly. If a screen needs something this document does not cover, extend the document first, then build.
+This is the single source of truth for how winamp-video-maker looks, reads, moves and is organised in code. Anyone (human or AI) building UI in this repo follows it exactly. If a screen needs something this document does not cover, extend the document first, then build.
 
 ## 1. Purpose and audience
 
-Playerz lets a creator pick a Winamp skin (`.wsz`), drop in a track, set a background and aspect ratio, and export a video of the skin playing that track. Webamp can play skins in the browser but cannot export video. Playerz exists to close that gap for people who make music content for Reels, TikTok, Shorts and YouTube.
+winamp-video-maker lets a creator pick a Winamp skin (`.wsz`), drop in a track, set a background and aspect ratio, and export a video of the skin playing that track. Webamp can play skins in the browser but cannot export video. winamp-video-maker exists to close that gap for people who make music content for Reels, TikTok, Shorts and YouTube.
 
 The page has one job: get from "I have a track" to "I have a video" with as few decisions as possible. Every design choice below serves that.
 
 ## 2. Direction
 
-**Thesis.** The skin is the only decorated object on screen. The shell around it is a quiet black stage crew: flat, monochrome, outlined rather than filled, with one hand-drawn voice (Ananias, the face the logo is set in) so it still feels like Playerz and not a generic dark editor.
+**Thesis.** The skin is the only decorated object on screen. The shell around it is a quiet black stage crew: flat, monochrome, outlined rather than filled, with one hand-drawn voice (Ananias, the face the logo is set in) so it still feels like winamp-video-maker and not a generic dark editor.
 
 **Signature.** The stage. The skin renders at an integer pixel scale, never blurred, inside a frame drawn as a 1px `contrast` outline with a small monospace corner tag (`9:16 · 1080×1920`), the way a video editor draws a safe-frame. Around it everything is ghost and outline. **Export is the single solid `contrast`-filled element on the page.**
 
@@ -103,11 +103,11 @@ CSS grid on the app root: `grid-template-columns: 280px 1fr 280px; grid-template
 ### 6.1 Header
 
 - Left group, gap 12: the logo, then the mono eyebrow `NAME` as a visible `<label>` and the 224px name input. Grouping the name with the logo keeps the right side for actions only.
-- Logo: 40px height (the square mark is illegible much smaller), plain `<img>`, `alt="Playerz"`. `/images/logo.png` (black tile) in dark mode, `/images/logo-light.png` (black marks on transparent) in light mode. No wordmark next to it; the logo is the wordmark.
+- Logo: 40px height (the square mark is illegible much smaller), plain `<img>`, `alt="winamp-video-maker"`. `/images/logo.png` (black tile) in dark mode, `/images/logo-light.png` (black marks on transparent) in light mode. No wordmark next to it; the logo is the wordmark.
 - Right group, gap 12: the help button, the theme toggle, then Export.
 - Name field: input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "semy-elite". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
 - Social links, centre: TikTok, Instagram, LinkedIn, GitHub and X as brand glyphs, 8px apart. They are anchors wearing `IconButton`'s styling, each `aria-label`led and tooltipped with the network name, opening in a new tab. The only decoration in the bar; they sit between the name field and the controls.
-- Help: `IconButton` with `IconHelp`, `aria-label` "Keyboard shortcuts". Opens the help dialog (§6.7).
+- Help: `IconButton` with `IconHelp`, `aria-label` "About and keyboard shortcuts". Opens the help dialog (§6.7).
 - Theme toggle: `IconButton`, `IconSun` in dark mode and `IconMoon` in light, `aria-label` "Switch to light mode" / "Switch to dark mode".
 - Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Label "Export", icon `IconDownload` left of it. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as semy-elite.mp4".
 - Bottom border 1px `rule`.
@@ -187,7 +187,7 @@ Opened by the header's Export button. Native `<dialog>`, 440px, `graphite` on th
 - Footer: ghost "Cancel", primary "Export". Inside the dialog this is the only filled button; the header's is behind the backdrop. Disabled while a run is in progress, with no tracks, or with an invalid selection. Pressing it closes the dialog and starts the run (§6.8).
 ### 6.7 Help dialog
 
-Opened by the header's help button. `Dialog` titled "Keyboard shortcuts", no footer; the X and Esc close it.
+Opened by the header's help button. `Dialog` titled "About and keyboard shortcuts", no footer; the X and Esc close it. Above the shortcuts, show the app name, description, and credits for Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite in the existing body typography.
 - Body: a `<dl>` of rows, each `flex items-center justify-between`: the action in UI type `paper` on the left, the key on the right as a 28px `<kbd>` `border-rule bg-graphite rounded-sm` in Data mono `paper`.
 - Shortcuts: **K** Play or pause · **J** Previous track · **L** Next track · **F** Fullscreen preview. The list is generated from the same `SHORTCUTS` table the key handler uses, so the dialog can never drift from the behaviour.
 - Shortcuts are ignored while typing in an input, textarea, select or contenteditable, and when Ctrl, Cmd or Alt is held.
@@ -372,7 +372,7 @@ All tokens live in `src/shared/index.css` and nowhere else.
 }
 ```
 
-`--color-*: initial` removes Tailwind's default palette so `text-red-500` does not compile. If a colour is not in this block it does not exist in Playerz. `useTheme` in `shared/store` sets `data-theme` on `<html>`; it reads the saved choice, else the OS preference.
+`--color-*: initial` removes Tailwind's default palette so `text-red-500` does not compile. If a colour is not in this block it does not exist in winamp-video-maker. `useTheme` in `shared/store` sets `data-theme` on `<html>`; it reads the saved choice, else the OS preference.
 
 ## 12. Do and don't
 
