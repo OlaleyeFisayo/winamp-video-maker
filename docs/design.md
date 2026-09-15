@@ -136,7 +136,7 @@ Implementation: the `webamp` package renders the skin. One instance for the app'
 
 - The bed is `graphite` with 32px padding, one step lighter than the panels so it reads as background, not surface. It is chrome and follows the theme. The frame sits on it.
 - The frame is filled with the Background colour (default the `stage` white), the largest box of the selected ratio that fits the bed (CSS container units, no JS measuring), centred, 1px `contrast` outline. No labels on or around it; the ratio is visible in the sidebar. Default 16:9.
-- Inside the frame: the skin stack (275×348 at 1×) centred and scaled with CSS `zoom` to the Size percentage of the frame height, capped at the frame width, so it follows the frame when the window or ratio changes. `zoom` rather than `transform` so Webamp's slider drags keep working at any scale.
+- Inside the frame: the skin stack (275×348 at 1×) centred and scaled with CSS `zoom` to the Size percentage of the frame height (default 50%), capped at the frame width, so it follows the frame when the window or ratio changes. `zoom` rather than `transform` so Webamp's slider drags keep working at any scale.
 - One cursor across the editor: after the skin loads, its main-window cursor is applied to the whole editor section, so hovering the bed and the skin look the same. Right-click does nothing anywhere in the editor; Webamp's context menu is suppressed.
 - Transport row, 48px, bottom-left under the frame with 16px above. Three 36px ghost buttons (bordered, icon only): previous (`IconPlayerSkipBack`), play/pause (`IconPlayerPlay`, `IconPlayerPause` while playing; label flips Play/Pause; pause keeps the position), next (`IconPlayerSkipForward`). Play appears once there is a track; previous and next appear once there are two or more. Next and previous loop: past the last track goes to the first, before the first goes to the last. Play with nothing current starts the first track. The skin's own buttons still work and the row mirrors them through Webamp's media status.
 - Adding tracks never starts playback; removing one keeps the playlist stopped unless another track was playing, in which case it keeps playing.
@@ -152,10 +152,14 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 - Custom selected: a row of two fields appears under the control, `W` and `H` eyebrows over 36px mono number inputs with `×` between. Values commit on blur or Enter, clamp to 16…7680, and drive the frame live. Picking a preset hides the row but keeps the values.
 - There is no resolution or frame-rate here; those are export choices (§6.6).
 **SIZE**
-- How large the skin is inside the frame, as a percentage of the frame height (default 70%). One row: a native range input 10…100 (`accent-color: contrast`, 4px track) and a 64px mono percent field that commits on blur or Enter. The skin is also capped at the frame width, so 100% on a tall frame fills the width instead.
+- How large the skin is inside the frame, as a percentage of the frame height (default 50%). One row: a native range input 10…100 (`accent-color: contrast`, 4px track) and a 64px mono percent field that commits on blur or Enter. The skin is also capped at the frame width, so 100% on a tall frame fills the width instead.
 
 **BACKGROUND**
-- The frame colour. One row: a 36px native colour input styled as a swatch (`border-rule rounded-sm`, no inner chrome) and a mono hex field showing `#RRGGBB` in upper case; the field commits on blur or Enter and reverts anything that is not a 6-digit hex. Default `#FFFFFF`, the `stage` token. Image and video backgrounds come later.
+- What sits behind the skin. A `Segmented` control picks Colour, Image or None.
+- Colour: one row with a 36px native colour input styled as a swatch (`border-rule rounded-sm`, no inner chrome) and a mono hex field showing `#RRGGBB` in upper case; the field commits on blur or Enter and reverts anything that is not a 6-digit hex. Default `#FFFFFF`, the `stage` token.
+- None: the frame shows a checkerboard (16px, `rule` over `graphite`, so it follows the theme) the way editing tools signal "nothing here". Only the active mode's controls are shown, so the panel stays short. A Body line in `ash` reads "The video exports with an alpha channel."
+- Image: with none chosen, a `Dropzone` (`image/*`, `IconPhoto`, "Drop an image here."); a rejected file shows "That isn't an image. Choose a PNG, JPG or WEBP." Once set, a card with a 36px thumbnail, the file name truncated and an `IconX` "Remove image", then a `Segmented` for fit: Cover or Contain. The image is kept when switching modes, so it returns. Image backgrounds are opaque and export as MP4.
+- Video backgrounds come later.
 
 
 ### 6.5 Template modal
@@ -171,7 +175,7 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 
 Opened by the header's Export button (enabled once a track is loaded). Native `<dialog>`, 440px, `graphite` on the `overlay` backdrop, `rounded-md`.
 - Header 56px: title "Export video" (Ananias 18 bold), `IconX` "Close". Esc and the backdrop close it.
-- Body, gap 24: eyebrow "Frame rate" over a `Segmented` of `30 fps` / `60 fps`; eyebrow "Resolution" over a `Segmented` of `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels). Then one Body line in `ash` with the numbers in mono `paper`: "Exports 1920 × 1080 at 30 fps as <name>.mp4".
+- Body, gap 24: eyebrow "Frame rate" over a `Segmented` of `30 fps` / `60 fps`; eyebrow "Resolution" over a `Segmented` of `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels). Then one Body line in `ash` with the numbers in mono `paper`: "Exports 1920 × 1080 at 30 fps as <name>.mp4". The extension follows the Background: `.webm` while transparent, since MP4 carries no alpha.
 - Footer: ghost "Cancel", primary "Export video". Inside the dialog this is the only filled button; the header's is behind the backdrop.
 
 ### 6.7 Help dialog
@@ -195,7 +199,7 @@ Every primitive accepts `className` and forwards native props. They are styled o
 | `Dropzone` | `idle`, `over`, `error` | A `<button>` that opens the native picker and accepts drops. Dashed border `rule`, `ash` on drag-over, `paper` on error. Renders an icon, a Body line, "Browse files", and the caller's error text underlined. Filters by `accept` (`multiple` optional); calls `onFiles` with the matches and `onReject` if any were dropped. |
 | native `<input type="color">` / `<input type="range">` | – | Pickers stay native, styled with tokens (`accent-contrast`, `border-rule` swatch). No picker library. |
 | `Segmented` | – | One-line radiogroup of equal segments, mono 12. Selected segment has a `contrast` border, never a fill. Arrow keys. Used for ratio, frame rate, resolution. |
-| `Toaster` | – | Bottom-centre stack of one-line notices, `graphite` on `rule`, 120 ms fade in, gone after 3 s or on X. `role="status"`. Webamp's native alerts are routed here. |
+| `Toaster` | – | Top-centre stack of one-line notices, `graphite` on `rule`, 120 ms fade in, gone after 3 s or on X. `role="status"`. Webamp's native alerts are routed here. |
 | `Dialog` | – | Native `<dialog>` with `showModal`, so focus trap, Esc and the `overlay` backdrop come from the browser. Title row, body, optional footer. |
 | `Field` | – | Label (UI type) over a `graphite` input with `border-rule`, `rounded-sm`, height 36. |
 | `Swatches` | – | Row of 20×20 squares, `contrast` outline on the selected one. |
@@ -220,7 +224,7 @@ Words exist to make the tool easier to use. Sentence case everywhere. Plain verb
 - Empty states tell the person what to do: "No audio yet. Drop an MP3 or WAV here." "Add a track to hear the skin play."
 - Errors state the cause and the fix in that order: "This file isn't a Winamp skin. Choose a .wsz file." Never "Oops" or "Something went wrong".
 - Shortcut labels in the help dialog are plain verb phrases naming the action ("Play or pause"), never "Press K to…"; the key cap beside them says which key.
-- Toasts are one sentence with no title, in the interface's voice: "That action isn't supported here." They never ask for a decision; that is a dialog.
+- Toasts are one sentence with no title, in the interface's voice: "That action isn't supported here." They never ask for a decision; that is a dialog. The stack sits top centre.
 - Data is written in mono with real units: `03:24`, `1080 × 1920`, `2.4 MB`, `30 fps`.
 - The person controls a template, a track, a background and a frame. The interface never says skin file, blob, buffer, layer stack or canvas.
 
