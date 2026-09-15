@@ -29,6 +29,7 @@ Strictly grey scale. There is no accent colour and no coloured state. Tokens are
 | `ash` | `#8A8A8A` | `#6F6F6F` | Secondary text, icons at rest, placeholders, disabled labels. |
 | `paper` | `#F2F2F2` | `#0D0D0D` | Primary text, active icons, outlines on hover-free selected items. |
 | `overlay` | `rgb(0 0 0 / 0.7)` | same | Dialog backdrop. The one translucent value. |
+| `letterbox` | `#000000` | `#000000` | Fullscreen preview surround. Fixed in both themes: a letterbox is black whatever the app looks like. |
 | `contrast` | `#FFFFFF` | `#000000` | Export button fill, selected-state outline, focus ring, stage frame outline. The maximum-contrast fill. |
 
 Rules:
@@ -115,9 +116,10 @@ CSS grid on the app root: `grid-template-columns: 280px 1fr 280px; grid-template
 Sections in this fixed order, because it is the creator's order of work: Template, Tracks. All collapsible. Size and Background live in the right sidebar with Frame, since all three shape the canvas. Each section is an eyebrow, an 8px gap, then its content. Sections are separated by 24px and a 1px `rule` divider.
 
 **TEMPLATE**
-- Thumbnail of the current skin's main window (from its `main.bmp`) on a `stage` background, `border-rule rounded-sm`, `image-rendering: pixelated`, full width, height auto.
-- Template name below in UI type, `paper`. Author (from the skin's readme if present) in Data mono, `ash`.
-- Ghost button "Change template" with `IconChevronRight`. Opens the Template modal.
+- A two-column grid of cards, one per bundled skin. Each card shows the skin's own main-window art on a `stage` ground (`image-rendering: pixelated`, cropped to the top) with the name below in 13px, truncated. Cards are buttons: `border-rule` at rest, `ash` on hover, `contrast` when selected, with `aria-pressed` carrying the state.
+- Thumbnails are read from the skin archive in the browser after it downloads, so nothing derived from the artwork is stored in the repo. A card with no thumbnail yet shows a mono dash.
+- Picking a skin shows a progress notice while it downloads. A skin already loaded once swaps instantly with no notice, since its blob is cached for the session.
+
 
 **TRACKS**
 - The playlist, in play order. It mirrors the skin's own playlist: tracks added through the skin (Eject, the playlist + button, ADD URL, a drop onto a window) appear here, and REM in the skin removes them here. The section is collapsible. Header action: a 28px `IconPlus` icon button "Add tracks" that opens the native picker (`audio/*`, multiple), shown only once tracks exist.
@@ -139,6 +141,7 @@ Implementation: the `webamp` package renders the skin. One instance for the app'
 - Inside the frame: the skin stack (275×348 at 1×) centred and scaled with CSS `zoom` to the Size percentage of the frame height (default 50%), capped at the frame width, so it follows the frame when the window or ratio changes. `zoom` rather than `transform` so Webamp's slider drags keep working at any scale.
 - One cursor across the editor: after the skin loads, its main-window cursor is applied to the whole editor section, so hovering the bed and the skin look the same. Right-click does nothing anywhere in the editor; Webamp's context menu is suppressed.
 - Transport row, 48px, bottom-left under the frame with 16px above. Three 36px ghost buttons (bordered, icon only): previous (`IconPlayerSkipBack`), play/pause (`IconPlayerPlay`, `IconPlayerPause` while playing; label flips Play/Pause; pause keeps the position), next (`IconPlayerSkipForward`). Play appears once there is a track; previous and next appear once there are two or more. Next and previous loop: past the last track goes to the first, before the first goes to the last. Play with nothing current starts the first track. The skin's own buttons still work and the row mirrors them through Webamp's media status.
+- Fullscreen preview: a button at the right end of the transport row (`IconMaximize`, `IconMinimize` while active) puts the whole editor section into fullscreen. The frame keeps its aspect ratio and fills the screen on its constrained axis; the rest is letterboxed in `letterbox` black, the one token fixed in both themes, so the preview reads like a video player. Nothing else is on screen: no transport, no timeline, no padding, and the skin is inert (`pointer-events: none`). Audio keeps playing. Esc or F exits, and exiting by any route, including the browser's own, is mirrored back into the button's state.
 - Adding tracks never starts playback; removing one keeps the playlist stopped unless another track was playing, in which case it keeps playing.
 - Timeline, under the transport, full editor width, hidden with no tracks. A `rule`-bordered box with two rows. Ruler, 24px on `ink`: 1px `rule` ticks at half-steps (4px) and full steps (8px, with a mono 11 `ash` label: `5s`, `10s`, then `1:00` style from a minute). The step is the smallest of 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300 s that keeps labels 64px apart at the current width. Lane, 36px on `graphite`: one segment per track laid end to end by duration, title in Ananias 13 `paper` truncated and duration in mono 11 `ash`, `rule` dividers; the playing segment has a 1px inset `contrast` outline. Playhead: 1px `contrast` line through both rows at the elapsed position; hidden when nothing is current. The whole strip is one `role="slider"`: press or drag anywhere to seek to that point in the overall timeline, switching track when the point falls in another segment (a paused player stays paused, a stopped one starts); Left and Right arrows seek 5 s. Tracks without a known duration show as a 4px sliver until Webamp reports it.
 - Unsupported browsers see Body text "This browser can't run the player. Try Chrome, Edge or Firefox." centred in the editor.
@@ -182,7 +185,7 @@ Opened by the header's Export button (enabled once a track is loaded). Native `<
 
 Opened by the header's help button. `Dialog` titled "Keyboard shortcuts", no footer; the X and Esc close it.
 - Body: a `<dl>` of rows, each `flex items-center justify-between`: the action in UI type `paper` on the left, the key on the right as a 28px `<kbd>` `border-rule bg-graphite rounded-sm` in Data mono `paper`.
-- Shortcuts: **K** Play or pause · **J** Previous track · **L** Next track. The list is generated from the same `SHORTCUTS` table the key handler uses, so the dialog can never drift from the behaviour.
+- Shortcuts: **K** Play or pause · **J** Previous track · **L** Next track · **F** Fullscreen preview. The list is generated from the same `SHORTCUTS` table the key handler uses, so the dialog can never drift from the behaviour.
 - Shortcuts are ignored while typing in an input, textarea, select or contenteditable, and when Ctrl, Cmd or Alt is held.
 
 ## 7. Components (`src/shared/ui`)
@@ -199,7 +202,7 @@ Every primitive accepts `className` and forwards native props. They are styled o
 | `Dropzone` | `idle`, `over`, `error` | A `<button>` that opens the native picker and accepts drops. Dashed border `rule`, `ash` on drag-over, `paper` on error. Renders an icon, a Body line, "Browse files", and the caller's error text underlined. Filters by `accept` (`multiple` optional); calls `onFiles` with the matches and `onReject` if any were dropped. |
 | native `<input type="color">` / `<input type="range">` | – | Pickers stay native, styled with tokens (`accent-contrast`, `border-rule` swatch). No picker library. |
 | `Segmented` | – | One-line radiogroup of equal segments, mono 12. Selected segment has a `contrast` border, never a fill. Arrow keys. Used for ratio, frame rate, resolution. |
-| `Toaster` | – | Top-centre stack of one-line notices, `graphite` on `rule`, 120 ms fade in, gone after 3 s or on X. `role="status"`. Webamp's native alerts are routed here. |
+| `Toaster` | text, progress | Top-centre stack, `graphite` on `rule`, 120 ms fade in. Text notices are one line and clear after 3 s or on X; Webamp's native alerts are routed here. A progress notice persists while a job runs: label, a mono percentage, and a 2px `rule` track with a `contrast` fill, with `role="progressbar"` carrying the value. |
 | `Dialog` | – | Native `<dialog>` with `showModal`, so focus trap, Esc and the `overlay` backdrop come from the browser. Title row, body, optional footer. |
 | `Field` | – | Label (UI type) over a `graphite` input with `border-rule`, `rounded-sm`, height 36. |
 | `Swatches` | – | Row of 20×20 squares, `contrast` outline on the selected one. |
@@ -251,7 +254,7 @@ src/
     ui/                  # primitives listed in section 7, one file each, barrel index.ts
     layout/
       AppShell.tsx       # header / left / stage / right grid
-    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, status, time, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useHelp (dialog open), useCanvas (skin scale, frame colour), useToast (notices)
+    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, status, time, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useHelp (dialog open), useCanvas (skin scale, frame colour), useTemplate (chosen skin, thumbnails), usePreview (fullscreen), useToast (notices)
     lib/
       cn.ts              # class joiner
       formatTime.ts      # seconds to mm:ss
@@ -261,10 +264,13 @@ src/
       presets.ts         # aspect presets, ratioLabel, exportSize
       acceptsFile.ts     # browser-style accept matching
       useElementSize.ts  # ResizeObserver hook
+      templates.ts       # the bundled skin catalogue
+      skinThumb.ts       # reads main.bmp out of a .wsz for the picker
   features/
     templates/           # TemplateSection, TemplateModal, TemplateCard, useSkins, parseWsz
     audio/               # TracksSection (playlist with Add tracks)
     canvas/              # SizeSection (skin scale), BackgroundSection (frame colour)
+    templates/           # TemplateSection (skin picker)
     background/          # BackgroundSection, useBackground
     editor/              # Editor, Transport, Timeline, lib/webamp.ts (singleton, lock, rename, reveal, elapsed), lib/useShortcuts.ts
     help/                # HelpDialog (keyboard shortcuts)

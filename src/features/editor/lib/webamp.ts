@@ -1,5 +1,8 @@
 import Webamp from "webamp"
 import { useToast } from "../../../shared/store/useToast"
+import { useTemplate } from "../../../shared/store/useTemplate"
+import { DEFAULT_TEMPLATE, TEMPLATES, templateUrl, type Template } from "../../../shared/lib/templates"
+import { skinThumbUrl } from "../../../shared/lib/skinThumb"
 
 type Action = { type: string; absolute?: boolean }
 type Dispatch = (action: object) => unknown
@@ -73,7 +76,7 @@ export const getWebamp = () => {
       .getState()
       .show(String(message) === "Not supported in Webamp" ? "That action isn't supported here." : String(message))
   instance = new Webamp({
-    initialSkin: { url: "/default-templates/sony-winamp-template.wsz" },
+    initialSkin: { url: templateUrl(DEFAULT_TEMPLATE) },
     windowLayout: {
       main: { position: { top: 0, left: 0 } },
       equalizer: { position: { top: 116, left: 0 } },
@@ -85,6 +88,81 @@ export const getWebamp = () => {
   // ponytail: Close would hide the player; the editor has no closed state
   instance.onWillClose((cancel) => cancel())
   return instance
+}
+
+/** Downloaded skins, kept so re-picking one is instant. */
+const cache = new Map<string, string>()
+
+/**
+ * Downloads every skin once so the picker can show real art before anything is chosen.
+ * Sequential and quiet: nothing is waiting on it, and one at a time keeps it out of the way
+ * of whatever the user is actually doing. The blobs double as the pick-it-later cache.
+ */
+export const prefetchSkins = async () => {
+  for (const template of TEMPLATES) {
+    await primeSkin(template)
+  }
+}
+
+/** Builds the thumbnail for a skin already on screen. No progress notice: nothing is waiting on it. */
+export const primeSkin = async (template: Template) => {
+  if (cache.has(template.id)) return
+  try {
+    const response = await fetch(templateUrl(template))
+    if (!response.ok) return
+    const blob = await response.blob()
+    cache.set(template.id, URL.createObjectURL(blob))
+    const thumb = await skinThumbUrl(await blob.arrayBuffer())
+    if (thumb) useTemplate.getState().setThumb(template.id, thumb)
+  } catch {
+    // a missing thumbnail is cosmetic; the skin itself is already loaded
+  }
+}
+
+/** Fetches a skin with byte progress, caches the blob, and hands it to Webamp. */
+export const loadSkin = async (template: Template) => {
+  const webamp = getWebamp()
+  const cached = cache.get(template.id)
+  if (cached) {
+    webamp.setSkinFromUrl(cached)
+    return webamp.skinIsLoaded()
+  }
+
+  const toast = useToast.getState()
+  toast.startProgress(`Loading ${template.name}`)
+  try {
+    const response = await fetch(templateUrl(template))
+    if (!response.ok || !response.body) throw new Error(String(response.status))
+
+    const total = Number(response.headers.get("content-length")) || 0
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let received = 0
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      received += value.length
+      // without a length header there is nothing honest to show, so hold at zero
+      if (total) toast.setProgress((received / total) * 100)
+    }
+
+    const blob = new Blob(chunks as BlobPart[], { type: "application/zip" })
+    const url = URL.createObjectURL(blob)
+    cache.set(template.id, url)
+
+    void blob.arrayBuffer().then(async (buffer) => {
+      const thumb = await skinThumbUrl(buffer)
+      if (thumb) useTemplate.getState().setThumb(template.id, thumb)
+    })
+
+    webamp.setSkinFromUrl(url)
+    await webamp.skinIsLoaded()
+  } catch {
+    toast.show("That template couldn't load. Try another.")
+  } finally {
+    toast.endProgress()
+  }
 }
 
 /** Renders into `node` the first time only; StrictMode double effects reuse the same promise. */

@@ -4,9 +4,12 @@ import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { useElementSize } from "../../../shared/lib/useElementSize"
+import { useTemplate } from "../../../shared/store/useTemplate"
+import { usePreview } from "../../../shared/store/usePreview"
+import { TEMPLATES } from "../../../shared/lib/templates"
 import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
-import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
+import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
@@ -47,6 +50,8 @@ export function Editor() {
   const commands = useAudio((s) => s.commands)
   const { width, height } = useFrame(frameSize)
   const { scale, mode, color, image, fit } = useCanvas()
+  const templateId = useTemplate((s) => s.id)
+  const preview = usePreview((s) => s.active)
   const frameSizePx = useElementSize(frame, supported)
   // zoom, not transform: zoom changes layout geometry too, so Webamp's slider drags stay accurate
   const zoom = frameSizePx.height
@@ -56,6 +61,34 @@ export function Editor() {
   const pendingSeek = useRef<{ index: number; offset: number; pause: boolean; loaded: boolean } | null>(null)
 
   useShortcuts()
+
+  // fullscreen goes on the whole editor, so the frame keeps sizing from container units
+  // and the transport and timeline come with it
+  useEffect(() => {
+    const el = section.current
+    if (!el) return
+    if (preview && document.fullscreenElement !== el) void el.requestFullscreen().catch(() => {})
+    if (!preview && document.fullscreenElement === el) void document.exitFullscreen().catch(() => {})
+  }, [preview])
+
+  // Esc and the browser's own exit bypass our button, so mirror the real state back
+  useEffect(() => {
+    const onChange = () => usePreview.getState().setActive(document.fullscreenElement === section.current)
+    document.addEventListener("fullscreenchange", onChange)
+    return () => document.removeEventListener("fullscreenchange", onChange)
+  }, [])
+
+  // the sidebar picks a template; the editor owns Webamp, so it does the loading
+  const loadedTemplate = useRef<string | null>(null)
+  useEffect(() => {
+    if (!supported || loadedTemplate.current === templateId) return
+    const template = TEMPLATES.find((t) => t.id === templateId)
+    if (!template) return
+    const first = loadedTemplate.current === null
+    loadedTemplate.current = templateId
+    // the constructor already loads the default skin, so on the first pass only warm the picker
+    void (first ? prefetchSkins() : loadSkin(template))
+  }, [templateId])
 
   useEffect(() => {
     if (!supported || !stage.current) return
@@ -183,7 +216,11 @@ export function Editor() {
   return (
     <section
       ref={section}
-      className="grid grid-rows-[1fr_auto_auto] overflow-hidden bg-graphite p-8"
+      className={cn(
+        "grid overflow-hidden",
+        // preview is the video and nothing else: black letterbox, no chrome, no padding
+        preview ? "grid-rows-1 bg-letterbox p-0" : "grid-rows-[1fr_auto_auto] bg-graphite p-8",
+      )}
       onContextMenuCapture={(e) => {
         // the editor has no context menu; this also stops Webamp opening its own
         e.preventDefault()
@@ -210,13 +247,23 @@ export function Editor() {
                 : { background: color }),
           }}
         >
-          <div className="absolute inset-0 grid place-items-center overflow-hidden">
+          {/* preview is a look at the video, not a player: nothing in the skin responds */}
+          <div
+            className={cn(
+              "absolute inset-0 grid place-items-center overflow-hidden",
+              preview && "pointer-events-none",
+            )}
+          >
             <div ref={stage} className="relative h-87 w-68.75" style={{ zoom }} />
           </div>
         </div>
       </div>
-      <Transport />
-      <Timeline />
+      {!preview && (
+        <>
+          <Transport />
+          <Timeline />
+        </>
+      )}
     </section>
   )
 }
