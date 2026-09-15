@@ -4,7 +4,7 @@ import { TracksSection } from "./features/audio"
 import { Editor } from "./features/editor"
 import { FrameSection } from "./features/frame"
 import { ExportDialog } from "./features/export"
-import { Panel } from "./shared/ui"
+import { Panel, Toaster } from "./shared/ui"
 
 function App() {
   return (
@@ -20,6 +20,7 @@ function App() {
         </Panel>
       </div>
       <ExportDialog />
+      <Toaster />
     </>
   )
 }

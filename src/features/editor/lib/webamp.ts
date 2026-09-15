@@ -1,4 +1,5 @@
 import Webamp from "webamp"
+import { useToast } from "../../../shared/store/useToast"
 
 type Action = { type: string; absolute?: boolean }
 type Dispatch = (action: object) => unknown
@@ -27,6 +28,18 @@ const captureStore: Middleware = (store) => {
   return (next) => (action) => next(action)
 }
 
+/**
+ * Scrolls the skin playlist so row `index` is visible and selects it.
+ * Selecting replaces any manual multi-selection in the skin; that is the price of a clear active row.
+ */
+export const revealTrack = (index: number, count: number) => {
+  dispatch?.({ type: "CLICKED_TRACK", index })
+  dispatch?.({
+    type: "SET_PLAYLIST_SCROLL_POSITION",
+    position: count > 1 ? Math.round((100 * index) / (count - 1)) : 0,
+  })
+}
+
 /** Renames a playlist track in place. Clears the artist tag, which Webamp would otherwise prefix. */
 export const renameTrack = (id: number, title: string) =>
   dispatch?.({ type: "SET_MEDIA_TAGS", id, title, artist: "" })
@@ -37,6 +50,11 @@ let rendered: Promise<void> | undefined
 
 export const getWebamp = () => {
   if (instance) return instance
+  // ponytail: webamp calls the global alert for unsupported menu items and skin errors
+  window.alert = (message?: unknown) =>
+    useToast
+      .getState()
+      .show(String(message) === "Not supported in Webamp" ? "That action isn't supported here." : String(message))
   instance = new Webamp({
     initialSkin: { url: "/default-templates/sony-winamp-template.wsz" },
     windowLayout: {
