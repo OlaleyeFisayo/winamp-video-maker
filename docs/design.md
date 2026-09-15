@@ -101,16 +101,18 @@ CSS grid on the app root: `grid-template-columns: 280px 1fr 280px; grid-template
 
 ### 6.1 Header
 
-- Left: the logo at 40px height (the square mark is illegible much smaller), plain `<img>`, `alt="Playerz"`. `/images/logo.png` (black tile) in dark mode, `/images/logo-light.png` (black marks on transparent) in light mode. No wordmark next to it; the logo is the wordmark.
-- Right, gap 12: the video name field, the theme toggle, then Export.
-- Name field: mono eyebrow `NAME` as a visible `<label>`, then a 256px input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "Untitled video". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
+- Left group, gap 12: the logo, then the mono eyebrow `NAME` as a visible `<label>` and the 224px name input. Grouping the name with the logo keeps the right side for actions only.
+- Logo: 40px height (the square mark is illegible much smaller), plain `<img>`, `alt="Playerz"`. `/images/logo.png` (black tile) in dark mode, `/images/logo-light.png` (black marks on transparent) in light mode. No wordmark next to it; the logo is the wordmark.
+- Right group, gap 12: the help button, the theme toggle, then Export.
+- Name field: input `bg-graphite border-rule rounded-sm`, hover `ash`, focus `paper`. Placeholder "Untitled video". It is always bordered and filled so it reads as editable at rest, and it starts empty so the placeholder itself says a name is optional. Export uses the name as the file name.
+- Help: `IconButton` with `IconHelp`, `aria-label` "Keyboard shortcuts". Opens the help dialog (§6.7).
 - Theme toggle: `IconButton`, `IconSun` in dark mode and `IconMoon` in light, `aria-label` "Switch to light mode" / "Switch to dark mode".
 - Export: `bg-contrast text-ink font-bold` Ananias 15, padding 8×16, `rounded-sm`. Icon `IconDownload` left of the label. This is the only filled button in the app. Disabled while no audio is loaded: `bg-graphite text-ash`, cursor not-allowed, tooltip "Add audio to export". Enabled with an empty name: tooltip "Exports as Untitled video.mp4".
 - Bottom border 1px `rule`.
 
 ### 6.2 Left sidebar
 
-Three sections in this fixed order, because it is the creator's order of work: Template, Tracks, Background. Each section is an eyebrow, an 8px gap, then its content. Sections are separated by 24px and a 1px `rule` divider.
+Sections in this fixed order, because it is the creator's order of work: Template, Tracks. All collapsible. Size and Background live in the right sidebar with Frame, since all three shape the canvas. Each section is an eyebrow, an 8px gap, then its content. Sections are separated by 24px and a 1px `rule` divider.
 
 **TEMPLATE**
 - Thumbnail of the current skin's main window (from its `main.bmp`) on a `stage` background, `border-rule rounded-sm`, `image-rendering: pixelated`, full width, height auto.
@@ -118,8 +120,8 @@ Three sections in this fixed order, because it is the creator's order of work: T
 - Ghost button "Change template" with `IconChevronRight`. Opens the Template modal.
 
 **TRACKS**
-- The playlist, in play order. It mirrors the skin's own playlist: tracks added through the skin (Eject, the playlist + button, ADD URL, a drop onto a window) appear here, and REM in the skin removes them here. Section header row: eyebrow `TRACKS` left, link button "Add tracks" with `IconPlus` right. The button opens the native picker (`audio/*`, multiple). No dropzone: the skin itself accepts drops, and a big empty box would compete with the stage.
-- Empty: Body text in `ash`, "No tracks yet. Add MP3 or WAV files. They play in this order."
+- The playlist, in play order. It mirrors the skin's own playlist: tracks added through the skin (Eject, the playlist + button, ADD URL, a drop onto a window) appear here, and REM in the skin removes them here. The section is collapsible. Header action: a 28px `IconPlus` icon button "Add tracks" that opens the native picker (`audio/*`, multiple), shown only once tracks exist.
+- Empty: the shared `Dropzone` with `IconMusic`, "Drop MP3 or WAV files here." and "Browse files". A rejected drop shows the skip line inside it.
 - Each row is one 36px line, `border-rule bg-graphite rounded-sm`: a 24px index button in Data mono `ash` ("Play <title>"), the name as a borderless inline input (border `rule` on hover, `ash` on focus), duration in Data mono `ash` (`--:--` until known), and a 28px `IconX` button "Remove <title>".
 - Renaming: edit the name, Enter or blur commits, Esc reverts. The new name shows in the skin's playlist and marquee immediately; playback is not interrupted.
 - The list shows at most five rows (212px) and scrolls for more. The playing track is always scrolled into view here, and in the skin's playlist it is scrolled into view and selected, so both lists agree on the active row.
@@ -127,20 +129,18 @@ Three sections in this fixed order, because it is the creator's order of work: T
 - Mixed picks keep the audio files and show "Some files weren't audio and were skipped. Use MP3, WAV, OGG or FLAC." under the list until the next add.
 - The first track added names the video when the name is still empty. Adding appends to the skin's playlist without interrupting playback; removing reloads the remaining list.
 
-**BACKGROUND**
-- A vertical radio list: Solid, Image, Video. Each row is 40px tall, radio drawn as a 12px circle with 1px `rule` border, filled `paper` when selected. Row text in UI type.
-- Solid: below the row, a swatch strip of six greys (`stage`, `ink`, `graphite`, `rule`, `ash`, `paper`) plus one "Custom" swatch that opens the native `<input type="color">`. Default `stage`. Selected swatch has a `contrast` outline.
-- Image / Video: below the row, the same Dropzone pattern as Audio, copy "Drop an image here." / "Drop a video here.", accepting `image/*` and `video/*`. Once loaded, a card with filename and a "Remove" icon button. A "Fit" segmented control (Cover, Contain) in Data mono.
-
 ### 6.3 Editor (centre)
 
 Implementation: the `webamp` package renders the skin. One instance for the app's lifetime (`features/editor/lib/webamp.ts`), mounted with `renderInto` on the editor section, which must be `position: relative`. Webamp centres its open windows in that section. Main, equalizer and playlist windows open, stacked. Window positions are locked: a Redux middleware drops drag and resize actions, and Close is cancelled through `onWillClose`, so every other skin control keeps working. The skin renders into a 275×348 box that CSS grid keeps centred on resize. The playlist is mirrored into `useAudio.tracks` on every Webamp state change; the sidebar sends `add` / `remove` / `play` commands through `useAudio.commands`, which the editor applies. The current track index is mirrored into `useAudio.current` from `onTrackDidChange` by matching the loaded url against `getPlaylistTracks()`; the sidebar sends commands through `useAudio.commands`, which the editor applies. On every track change `revealTrack` selects the row in the skin playlist and sets its scroll position so the row is visible. `zIndex: 1` so dialogs and overlays sit above the skin. Audio comes from `useAudio.tracks`: appended files go through `appendTracks`, any other change reloads with `setTracksToPlay`, an empty list stops playback. Files are passed as blob tracks.
 
 
 - The bed is `graphite` with 32px padding, one step lighter than the panels so it reads as background, not surface. It is chrome and follows the theme. The frame sits on it.
-- The frame is `stage` white, the largest box of the selected ratio that fits the bed (CSS container units, no JS measuring), centred, 1px `contrast` outline. No labels on or around it; the ratio is visible in the sidebar. Default 16:9.
-- Inside the frame: the background layer (solid, image or video, respecting Fit), then the skin centred on top at 1× in its 275×348 box. Scaling the skin to the frame is an export concern; a frame smaller than the skin clips it.
-- Transport: deferred. The skin's own buttons play, pause and seek. Revisit a shell transport bar when the aspect frame lands, if the skin's controls prove too small in the frame.
+- The frame is filled with the Background colour (default the `stage` white), the largest box of the selected ratio that fits the bed (CSS container units, no JS measuring), centred, 1px `contrast` outline. No labels on or around it; the ratio is visible in the sidebar. Default 16:9.
+- Inside the frame: the skin stack (275×348 at 1×) centred and scaled with CSS `zoom` to the Size percentage of the frame height, capped at the frame width, so it follows the frame when the window or ratio changes. `zoom` rather than `transform` so Webamp's slider drags keep working at any scale.
+- One cursor across the editor: after the skin loads, its main-window cursor is applied to the whole editor section, so hovering the bed and the skin look the same. Right-click does nothing anywhere in the editor; Webamp's context menu is suppressed.
+- Transport row, 48px, bottom-left under the frame with 16px above. Three 36px ghost buttons (bordered, icon only): previous (`IconPlayerSkipBack`), play/pause (`IconPlayerPlay`, `IconPlayerPause` while playing; label flips Play/Pause; pause keeps the position), next (`IconPlayerSkipForward`). Play appears once there is a track; previous and next appear once there are two or more. Next and previous loop: past the last track goes to the first, before the first goes to the last. Play with nothing current starts the first track. The skin's own buttons still work and the row mirrors them through Webamp's media status.
+- Adding tracks never starts playback; removing one keeps the playlist stopped unless another track was playing, in which case it keeps playing.
+- Timeline, under the transport, full editor width, hidden with no tracks. A `rule`-bordered box with two rows. Ruler, 24px on `ink`: 1px `rule` ticks at half-steps (4px) and full steps (8px, with a mono 11 `ash` label: `5s`, `10s`, then `1:00` style from a minute). The step is the smallest of 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300 s that keeps labels 64px apart at the current width. Lane, 36px on `graphite`: one segment per track laid end to end by duration, title in Ananias 13 `paper` truncated and duration in mono 11 `ash`, `rule` dividers; the playing segment has a 1px inset `contrast` outline. Playhead: 1px `contrast` line through both rows at the elapsed position; hidden when nothing is current. The whole strip is one `role="slider"`: press or drag anywhere to seek to that point in the overall timeline, switching track when the point falls in another segment (a paused player stays paused, a stopped one starts); Left and Right arrows seek 5 s. Tracks without a known duration show as a 4px sliver until Webamp reports it.
 - Unsupported browsers see Body text "This browser can't run the player. Try Chrome, Edge or Firefox." centred in the editor.
 
 ### 6.4 Right sidebar
@@ -151,6 +151,12 @@ Every section here is collapsible: the header row is a `<summary>` with the eyeb
 - One `Segmented` control on a single line: `16:9` · `9:16` · `1:1` · `4:5` · `Custom`. Labels only, in Data mono 12; no glyphs or platform hints. Default 16:9. Arrow keys move the selection.
 - Custom selected: a row of two fields appears under the control, `W` and `H` eyebrows over 36px mono number inputs with `×` between. Values commit on blur or Enter, clamp to 16…7680, and drive the frame live. Picking a preset hides the row but keeps the values.
 - There is no resolution or frame-rate here; those are export choices (§6.6).
+**SIZE**
+- How large the skin is inside the frame, as a percentage of the frame height (default 70%). One row: a native range input 10…100 (`accent-color: contrast`, 4px track) and a 64px mono percent field that commits on blur or Enter. The skin is also capped at the frame width, so 100% on a tall frame fills the width instead.
+
+**BACKGROUND**
+- The frame colour. One row: a 36px native colour input styled as a swatch (`border-rule rounded-sm`, no inner chrome) and a mono hex field showing `#RRGGBB` in upper case; the field commits on blur or Enter and reverts anything that is not a 6-digit hex. Default `#FFFFFF`, the `stage` token. Image and video backgrounds come later.
+
 
 ### 6.5 Template modal
 
@@ -168,6 +174,13 @@ Opened by the header's Export button (enabled once a track is loaded). Native `<
 - Body, gap 24: eyebrow "Frame rate" over a `Segmented` of `30 fps` / `60 fps`; eyebrow "Resolution" over a `Segmented` of `720p` / `1080p` / `2K` / `4K` (short side 720 / 1080 / 1440 / 2160; the long side follows the frame ratio, both rounded to even pixels). Then one Body line in `ash` with the numbers in mono `paper`: "Exports 1920 × 1080 at 30 fps as <name>.mp4".
 - Footer: ghost "Cancel", primary "Export video". Inside the dialog this is the only filled button; the header's is behind the backdrop.
 
+### 6.7 Help dialog
+
+Opened by the header's help button. `Dialog` titled "Keyboard shortcuts", no footer; the X and Esc close it.
+- Body: a `<dl>` of rows, each `flex items-center justify-between`: the action in UI type `paper` on the left, the key on the right as a 28px `<kbd>` `border-rule bg-graphite rounded-sm` in Data mono `paper`.
+- Shortcuts: **K** Play or pause · **J** Previous track · **L** Next track. The list is generated from the same `SHORTCUTS` table the key handler uses, so the dialog can never drift from the behaviour.
+- Shortcuts are ignored while typing in an input, textarea, select or contenteditable, and when Ctrl, Cmd or Alt is held.
+
 ## 7. Components (`src/shared/ui`)
 
 Every primitive accepts `className` and forwards native props. They are styled only with token classes.
@@ -180,6 +193,7 @@ Every primitive accepts `className` and forwards native props. They are styled o
 | `Panel` | – | A sidebar column: `bg-ink`, side border 1px `rule`, padding 16, overflow-y auto. |
 | `PanelSection` | `collapsible` | `Eyebrow` (plus optional `action` slot, right-aligned) + 8px gap + children. Adds a 1px `rule` divider and 24px above when not first. `collapsible` renders `<details open>` with a chevron in the summary. |
 | `Dropzone` | `idle`, `over`, `error` | A `<button>` that opens the native picker and accepts drops. Dashed border `rule`, `ash` on drag-over, `paper` on error. Renders an icon, a Body line, "Browse files", and the caller's error text underlined. Filters by `accept` (`multiple` optional); calls `onFiles` with the matches and `onReject` if any were dropped. |
+| native `<input type="color">` / `<input type="range">` | – | Pickers stay native, styled with tokens (`accent-contrast`, `border-rule` swatch). No picker library. |
 | `Segmented` | – | One-line radiogroup of equal segments, mono 12. Selected segment has a `contrast` border, never a fill. Arrow keys. Used for ratio, frame rate, resolution. |
 | `Toaster` | – | Bottom-centre stack of one-line notices, `graphite` on `rule`, 120 ms fade in, gone after 3 s or on X. `role="status"`. Webamp's native alerts are routed here. |
 | `Dialog` | – | Native `<dialog>` with `showModal`, so focus trap, Esc and the `overlay` backdrop come from the browser. Title row, body, optional footer. |
@@ -205,6 +219,7 @@ Words exist to make the tool easier to use. Sentence case everywhere. Plain verb
 - Buttons name the result: "Export video", "Add audio", "Change template", "Use this template", "Browse files", "Remove audio". A name stays the same through the whole flow: the button says "Export video", the progress toast says "Exporting video", the finished toast says "Video exported".
 - Empty states tell the person what to do: "No audio yet. Drop an MP3 or WAV here." "Add a track to hear the skin play."
 - Errors state the cause and the fix in that order: "This file isn't a Winamp skin. Choose a .wsz file." Never "Oops" or "Something went wrong".
+- Shortcut labels in the help dialog are plain verb phrases naming the action ("Play or pause"), never "Press K to…"; the key cap beside them says which key.
 - Toasts are one sentence with no title, in the interface's voice: "That action isn't supported here." They never ask for a decision; that is a dialog.
 - Data is written in mono with real units: `03:24`, `1080 × 1920`, `2.4 MB`, `30 fps`.
 - The person controls a template, a track, a background and a frame. The interface never says skin file, blob, buffer, layer stack or canvas.
@@ -232,7 +247,7 @@ src/
     ui/                  # primitives listed in section 7, one file each, barrel index.ts
     layout/
       AppShell.tsx       # header / left / stage / right grid
-    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useToast (notices)
+    store/               # zustand, one file per store: useProject (name), useTheme (dark/light), useAudio (tracks mirrored from the skin, current, status, time, commands), useFrame (ratio, custom size), useExport (dialog open, fps, resolution), useHelp (dialog open), useCanvas (skin scale, frame colour), useToast (notices)
     lib/
       cn.ts              # class joiner
       formatTime.ts      # seconds to mm:ss
@@ -241,11 +256,14 @@ src/
       formatTime.ts      # 125 to 2:05
       presets.ts         # aspect presets, ratioLabel, exportSize
       acceptsFile.ts     # browser-style accept matching
+      useElementSize.ts  # ResizeObserver hook
   features/
     templates/           # TemplateSection, TemplateModal, TemplateCard, useSkins, parseWsz
     audio/               # TracksSection (playlist with Add tracks)
+    canvas/              # SizeSection (skin scale), BackgroundSection (frame colour)
     background/          # BackgroundSection, useBackground
-    editor/              # Editor, lib/webamp.ts (singleton, renderOnce)
+    editor/              # Editor, Transport, Timeline, lib/webamp.ts (singleton, lock, rename, reveal, elapsed), lib/useShortcuts.ts
+    help/                # HelpDialog (keyboard shortcuts)
     frame/               # FrameSection (ratio segmented control, custom size)
     export/              # ExportDialog (frame rate, resolution)
 ```
