@@ -50,16 +50,23 @@ for (const key of initial) {
 }
 
 const originalURL = process.env.VITE_SITE_URL;
+const metadataCache = await mkdtemp(join(tmpdir(), "winamp-metadata-"));
+const metadataServer = {
+  cacheDir: metadataCache,
+  logLevel: "silent",
+  optimizeDeps: { noDiscovery: true, include: [] },
+  server: { middlewareMode: true },
+};
 try {
   for (const site of ["", "https://example.com/", "not-a-url", "javascript:alert(1)", "https://user:secret@example.com/"]) {
     process.env.VITE_SITE_URL = site;
     let server;
     try {
       if (site && site !== "https://example.com/") {
-        await assert.rejects(createServer({ logLevel: "silent", server: { middlewareMode: true } }), /VITE_SITE_URL/);
+        await assert.rejects(createServer(metadataServer), /VITE_SITE_URL/);
         continue;
       }
-      server = await createServer({ server: { middlewareMode: true } });
+      server = await createServer(metadataServer);
       const rendered = await server.transformIndexHtml("/", await readFile(new URL("index.html", root), "utf8"));
       if (site) {
         assert.match(rendered, /property="og:url" content="https:\/\/example.com\/"/);
@@ -76,5 +83,6 @@ try {
 } finally {
   if (originalURL === undefined) delete process.env.VITE_SITE_URL;
   else process.env.VITE_SITE_URL = originalURL;
+  await rm(metadataCache, { recursive: true, force: true });
 }
 console.log("Passed: pnpm guard, metadata, site URL validation, and lazy chunk boundaries.");
