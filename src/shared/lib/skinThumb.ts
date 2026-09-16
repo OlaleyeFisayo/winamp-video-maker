@@ -36,7 +36,7 @@ export const skinThumbUrl = async (archive: ArrayBuffer): Promise<string | null>
     ctx.translate(0, WIN_H)
     drawEq(ctx, skin, PREVIEW_STATE)
     ctx.translate(0, WIN_H)
-    drawPlaylist(ctx, skin, PREVIEW_TRACKS, 0, PREVIEW_T)
+    drawPlaylist(ctx, skin, PREVIEW_TRACKS, 0)
     return URL.createObjectURL(await canvas.convertToBlob({ type: "image/png" }))
   } catch {
     return null

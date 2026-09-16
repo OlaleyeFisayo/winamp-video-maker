@@ -47,7 +47,7 @@ function Row({ track: t, index: i, active }: RowProps) {
     <li
       data-active={active || undefined}
       className={cn(
-        "flex h-9 shrink-0 items-center gap-2 rounded-sm border bg-graphite pl-2 pr-1 transition-colors duration-100",
+        "flex h-11 shrink-0 items-center gap-2 rounded-sm border bg-graphite pl-2 pr-1 transition-colors duration-100 md:h-9",
         active ? "border-contrast" : "border-rule",
       )}
     >
@@ -55,7 +55,7 @@ function Row({ track: t, index: i, active }: RowProps) {
         type="button"
         aria-label={`Play ${t.title}`}
         onClick={() => enqueue({ type: "play", index: i })}
-        className="flex size-6 shrink-0 items-center justify-center rounded-xs font-mono text-[13px] leading-none text-ash hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+        className="flex size-9 shrink-0 items-center justify-center rounded-xs font-mono md:size-6 text-[13px] leading-none text-ash hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
       >
         {active ? <IconPlayerPlay size={14} stroke={1.5} aria-hidden className="text-paper" /> : i + 1}
       </button>
@@ -65,7 +65,7 @@ function Row({ track: t, index: i, active }: RowProps) {
         onRename={(title) => enqueue({ type: "rename", index: i, title })}
       />
       <span className="shrink-0 font-mono text-[13px] leading-none text-ash">{formatTime(t.duration)}</span>
-      <IconButton aria-label={`Remove ${t.title}`} onClick={() => enqueue({ type: "remove", index: i })} className="size-7">
+      <IconButton aria-label={`Remove ${t.title}`} onClick={() => enqueue({ type: "remove", index: i })} className="size-9 md:size-7">
         <IconX size={14} stroke={1.5} aria-hidden />
       </IconButton>
     </li>
@@ -106,7 +106,7 @@ export function TracksSection() {
       collapsible
       action={
         !empty && (
-          <IconButton aria-label="Add tracks" className="size-7" onClick={() => input.current?.click()}>
+          <IconButton aria-label="Add tracks" className="size-9 md:size-7" onClick={() => input.current?.click()}>
             <IconPlus size={16} stroke={1.5} aria-hidden />
           </IconButton>
         )
@@ -135,8 +135,8 @@ export function TracksSection() {
           Drop MP3 or WAV files here.
         </Dropzone>
       ) : (
-        // 5 rows of 36px plus 4 gaps of 8px; more than that scrolls
-        <ol ref={list} className="flex max-h-53 flex-col gap-2 overflow-y-auto pr-1">
+        // 5 rows plus 4 gaps of 8px; more than that scrolls. Rows are 44px on touch, 36px from md
+        <ol ref={list} className="flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-53">
           {tracks.map((t, i) => (
             <Row key={t.id} track={t} index={i} active={i === current} />
           ))}

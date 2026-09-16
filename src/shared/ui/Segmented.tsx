@@ -28,7 +28,8 @@ export function Segmented<V extends string>({ options, value, onChange, classNam
       role="radiogroup"
       aria-label={rest["aria-label"]}
       onKeyDown={onKeyDown}
-      className={cn("flex gap-1 rounded-sm border border-rule bg-graphite p-1", className)}
+      // wraps rather than clips: five options in a 248px panel leave ~47px per button
+      className={cn("flex flex-wrap gap-1 rounded-sm border border-rule bg-graphite p-1", className)}
     >
       {options.map((o) => {
         const selected = o.value === value
@@ -41,7 +42,7 @@ export function Segmented<V extends string>({ options, value, onChange, classNam
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(o.value)}
             className={cn(
-              "h-7 flex-1 rounded-xs border px-1 font-mono text-[12px] leading-none transition-colors duration-100",
+              "h-11 flex-1 basis-14 rounded-xs border px-1 font-mono text-[12px] leading-none transition-colors duration-100 md:h-7",
               "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
               selected ? "border-contrast text-paper" : "border-transparent text-ash hover:text-paper",
             )}

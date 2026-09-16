@@ -56,7 +56,7 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
   }
 
   return {
-    render(ctx: OffscreenCanvasRenderingContext2D, trackIndex: number, trackTime: number, playlistTime: number) {
+    render(ctx: OffscreenCanvasRenderingContext2D, trackIndex: number, trackTime: number) {
       const track = scene.tracks[trackIndex]
       const at = Math.floor(trackTime * track.sampleRate)
       const vis = scene.skin.vis === 0 ? spectrum(track.mono, at) : scene.skin.vis === 1 ? oscilloscope(track.mono, at) : null
@@ -75,7 +75,7 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
       }
       if (open[2]) {
         sctx.save(); sctx.translate(0, y)
-        drawPlaylist(sctx, skin, scene.tracks, trackIndex, playlistTime)
+        drawPlaylist(sctx, skin, scene.tracks, trackIndex)
         sctx.restore()
       }
 

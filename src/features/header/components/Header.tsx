@@ -1,33 +1,11 @@
-import {
-  IconBrandGithub,
-  IconBrandInstagram,
-  IconBrandLinkedin,
-  IconBrandTiktok,
-  IconBrandX,
-  IconDownload,
-  IconHelp,
-  IconMoon,
-  IconSun,
-} from "@tabler/icons-react"
+import { IconDownload, IconHelp, IconMoon, IconSun } from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
+import { LINKS, linkClass } from "../../../shared/lib/links"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useExport } from "../../../shared/store/useExport"
 import { useHelp } from "../../../shared/store/useHelp"
 import { DEFAULT_NAME, useProject } from "../../../shared/store/useProject"
 import { useTheme } from "../../../shared/store/useTheme"
-
-const LINKS = [
-  { label: "TikTok", href: "https://www.tiktok.com/@semyelite", Icon: IconBrandTiktok },
-  { label: "Instagram", href: "https://www.instagram.com/omo.its.semy", Icon: IconBrandInstagram },
-  { label: "LinkedIn", href: "https://www.linkedin.com/in/olaleyefisayo/", Icon: IconBrandLinkedin },
-  { label: "GitHub", href: "https://github.com/OlaleyeFisayo", Icon: IconBrandGithub },
-  { label: "X", href: "https://x.com/semyelite", Icon: IconBrandX },
-]
-
-// ponytail: IconButton renders a <button>, so the links borrow its classes rather than
-// making it polymorphic for five anchors
-const linkClass =
-  "inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-ash transition-colors duration-100 hover:border-rule hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
 
 const exportHint = (canExport: boolean, name: string) => {
   if (!canExport) return "Add audio to export"
@@ -44,22 +22,23 @@ export function Header() {
   const ThemeIcon = theme === "dark" ? IconSun : IconMoon
 
   return (
-    <header className="col-span-3 flex h-14 items-center justify-between border-b border-rule bg-ink px-4">
-      <div className="flex items-center gap-3">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-rule bg-ink px-4 md:col-span-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
         <img
           src={theme === "dark" ? "/images/logo.png" : "/images/logo-light.png"}
           alt="winamp-video-maker"
-          className="h-10"
+          className="h-10 shrink-0"
         />
         <input
           id="video-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder={DEFAULT_NAME}
-          className="h-9 w-56 rounded-sm border border-rule bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+          className="h-9 w-full min-w-0 rounded-sm border border-rule md:w-56 bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
         />
       </div>
-      <div className="flex items-center gap-1">
+      {/* the profiles carry these links too, so they are the first thing to go when narrow */}
+      <div className="hidden items-center gap-1 md:flex">
         {LINKS.map(({ label, href, Icon }) => (
           <a
             key={label}
@@ -74,8 +53,8 @@ export function Header() {
           </a>
         ))}
       </div>
-      <div className="flex items-center gap-3">
-        <IconButton aria-label="About and keyboard shortcuts" onClick={() => openHelp(true)}>
+      <div className="flex shrink-0 items-center gap-1 md:gap-3">
+        <IconButton aria-label="About" onClick={() => openHelp(true)}>
           <IconHelp size={16} stroke={1.5} aria-hidden />
         </IconButton>
         <IconButton
@@ -86,12 +65,14 @@ export function Header() {
         </IconButton>
         <Button
           variant="primary"
+          aria-label="Export"
           icon={<IconDownload size={16} stroke={1.5} aria-hidden />}
           disabled={!canExport}
           title={exportHint(canExport, name)}
           onClick={() => openExport(true)}
+          className="px-3 md:px-4"
         >
-          Export
+          <span className="hidden sm:inline">Export</span>
         </Button>
       </div>
     </header>

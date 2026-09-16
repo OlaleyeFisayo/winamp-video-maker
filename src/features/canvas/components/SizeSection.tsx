@@ -47,7 +47,7 @@ export function SizeSection() {
           aria-label="Template size"
           value={percent}
           onChange={(e) => setScale(Number(e.target.value) / 100)}
-          className="h-1 flex-1 cursor-pointer accent-contrast"
+          className="h-2 flex-1 cursor-pointer accent-contrast md:h-1"
         />
         <PercentField key={percent} value={percent} onCommit={(n) => setScale(n / 100)} />
       </div>
