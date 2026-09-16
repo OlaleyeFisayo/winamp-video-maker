@@ -1,6 +1,7 @@
+import { useState } from "react"
 import { Link } from "react-router"
-import { IconBuildingStore } from "@tabler/icons-react"
-import { PanelSection } from "../../../shared/ui"
+import { IconBuildingStore, IconChevronLeft, IconChevronRight } from "@tabler/icons-react"
+import { IconButton, PanelSection } from "../../../shared/ui"
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { useSavedSkins } from "../../../shared/store/useSavedSkins"
 import { TEMPLATES } from "../../../shared/lib/templates"
@@ -17,6 +18,14 @@ export function TemplateSection() {
     ...TEMPLATES.map((t) => ({ id: t.id, name: t.name, thumb: thumbs[t.id] })),
   ]
 
+  // the viewed slide is tracked by id, not index: saved skins are prepended and arrive
+  // asynchronously, which would otherwise shift the view out from under the user
+  const [viewed, setViewed] = useState(id)
+  const at = Math.max(0, items.findIndex((t) => t.id === viewed))
+  const item = items[at]
+  // wraps: last -> first and first -> last, so neither arrow ever dead-ends
+  const step = (d: number) => setViewed(items[(at + d + items.length) % items.length].id)
+
   return (
     <PanelSection
       title="Template"
@@ -32,40 +41,62 @@ export function TemplateSection() {
         </Link>
       }
     >
-      <ul className="grid grid-cols-2 gap-2">
-        {items.map((t) => {
-          const selected = t.id === id
-          return (
-            <li key={t.id}>
-              <button
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setId(t.id)}
-                className={cn(
-                  "flex w-full flex-col gap-1 rounded-sm border p-1 text-left transition-colors duration-100",
-                  "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
-                  selected ? "border-contrast" : "border-rule hover:border-ash",
+      {item && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1">
+            <IconButton
+              aria-label="Previous template"
+              onClick={() => step(-1)}
+              className="shrink-0"
+            >
+              <IconChevronLeft size={16} stroke={1.5} aria-hidden />
+            </IconButton>
+
+            <button
+              type="button"
+              aria-pressed={item.id === id}
+              onClick={() => setId(item.id)}
+              title={`Use ${item.name}`}
+              className={cn(
+                "min-w-0 flex-1 rounded-sm border p-1 transition-colors duration-100",
+                "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
+                item.id === id ? "border-contrast" : "border-rule hover:border-ash",
+              )}
+            >
+              {/* ponytail: same picture box as the marketplace SkinCard, copied not shared —
+                  the label/busy/lazy differences made a shared component all props */}
+              <span className="grid aspect-275/348 w-full place-items-center overflow-hidden rounded-xs bg-stage">
+                {item.thumb ? (
+                  <img
+                    src={item.thumb}
+                    alt=""
+                    className="h-full w-full object-contain [image-rendering:pixelated]"
+                  />
+                ) : (
+                  <span className="font-mono text-[11px] text-ash">—</span>
                 )}
-              >
-                <span className="grid h-12 place-items-center overflow-hidden rounded-xs bg-stage">
-                  {t.thumb ? (
-                    <img
-                      src={t.thumb}
-                      alt=""
-                      className="h-full w-full object-cover object-top [image-rendering:pixelated]"
-                    />
-                  ) : (
-                    <span className="font-mono text-[11px] text-ash">—</span>
-                  )}
-                </span>
-                <span className="truncate text-[13px] leading-[1.3] text-paper" title={t.name}>
-                  {t.name}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+              </span>
+            </button>
+
+            <IconButton
+              aria-label="Next template"
+              onClick={() => step(1)}
+              className="shrink-0"
+            >
+              <IconChevronRight size={16} stroke={1.5} aria-hidden />
+            </IconButton>
+          </div>
+
+          <p aria-live="polite" className="flex items-baseline justify-between gap-2 text-[13px] leading-[1.3]">
+            <span className="truncate text-paper" title={item.name}>
+              {item.name}
+            </span>
+            <span className="shrink-0 font-mono text-ash">
+              {at + 1}/{items.length}
+            </span>
+          </p>
+        </div>
+      )}
     </PanelSection>
   )
 }

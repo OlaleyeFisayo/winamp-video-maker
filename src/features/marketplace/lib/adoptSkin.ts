@@ -1,7 +1,7 @@
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { useToast } from "../../../shared/store/useToast"
 import { saveSkin } from "../../../shared/store/useSavedSkins"
-import { skinThumbUrl } from "../../../shared/lib/skinThumb"
+import { readEntries } from "../../../shared/lib/zip"
 import { stripExt } from "../../../shared/lib/stripExt"
 import type { MuseumSkin } from "./museum"
 
@@ -10,9 +10,8 @@ const isSkin = async (blob: Blob) => {
   const head = new Uint8Array(await blob.slice(0, 2).arrayBuffer())
   if (head[0] !== 0x50 || head[1] !== 0x4b) return false
   // a zip that has no main.bmp is not a classic skin the renderer can draw
-  const thumb = await skinThumbUrl(await blob.arrayBuffer())
-  if (thumb) URL.revokeObjectURL(thumb)
-  return thumb !== null
+  const bmp = (await readEntries(await blob.arrayBuffer(), ["main.bmp"])).get("main.bmp")
+  return bmp?.[0] === 0x42 && bmp?.[1] === 0x4d
 }
 
 /** Saves the archive to the local library and selects it. Returns false if it is not a skin. */
