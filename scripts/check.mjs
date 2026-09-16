@@ -10,7 +10,7 @@ const root = new URL("../", import.meta.url);
 const temporary = await mkdtemp(join(tmpdir(), "winamp-check-"));
 try {
   await copyFile(new URL("scripts/require-pnpm.mjs", root), join(temporary, "require-pnpm.mjs"));
-  for (const agent of ["pnpm/11.10.0 npm/? node/v22.22.1", "npm/11.0.0", "yarn/1.22.22", "bun/1.3.0", ""]) {
+  for (const agent of ["pnpm/11.10.0 npm/? node/v22.22.1", "pnpm/9.0.0", "npm/11.0.0", "yarn/1.22.22", "bun/1.3.0", ""]) {
     const result = spawnSync(process.execPath, ["require-pnpm.mjs"], {
       cwd: temporary, encoding: "utf8", env: { ...process.env, npm_config_user_agent: agent },
     });

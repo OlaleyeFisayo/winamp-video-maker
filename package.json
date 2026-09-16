@@ -2,14 +2,6 @@
   "name": "winamp-video-maker",
   "description": "Turn audio into Winamp-style videos with classic skins, animated visualizers, custom backgrounds, and flexible export settings.",
   "author": "Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite",
-  "packageManager": "pnpm@11.10.0",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "11.10.0",
-      "onFail": "error"
-    }
-  },
   "private": true,
   "version": "1.0.0",
   "type": "module",
