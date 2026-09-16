@@ -6,7 +6,7 @@
  * or blocked storage costs the restore, never the app.
  */
 
-const DB = "playerz-session"
+const DB = "winamp-video-maker-session"
 const STORE = "files"
 
 export type StoredFile = { blob: Blob; name: string }
@@ -47,13 +47,23 @@ const run = async <T,>(
   })
 }
 
-export const putFile = (id: string, file: File) =>
-  run<unknown>("readwrite", (s) => s.put({ blob: file, name: file.name } satisfies StoredFile, id), null)
+export const putFile = (id: string, file: File | Blob, name?: string) =>
+  run<unknown>(
+    "readwrite",
+    (s) => s.put({ blob: file, name: name ?? (file as File).name ?? "" } satisfies StoredFile, id),
+    null,
+  )
 
 export const getFile = (id: string) =>
   run<StoredFile | undefined>("readonly", (s) => s.get(id), undefined)
 
 export const deleteFile = (id: string) => run<unknown>("readwrite", (s) => s.delete(id), null)
+
+/** Every stored id starting with `prefix`. Used to keep saved skins out of the prune below. */
+export const listKeys = (prefix: string) =>
+  run<IDBValidKey[]>("readonly", (s) => s.getAllKeys(), []).then((keys) =>
+    keys.filter((k): k is string => typeof k === "string" && k.startsWith(prefix)),
+  )
 
 /** Drops every record whose id is not in `keep`, so removed tracks stop costing disk. */
 export const clearExcept = (keep: string[]) =>

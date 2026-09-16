@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
 import { PRESETS, type PresetId } from "../lib/presets"
 
@@ -31,7 +32,7 @@ export const useFrame = create<Frame>()(
         })),
     }),
     {
-      name: "playerz-frame",
+      name: key("frame"),
       partialize: (s) => ({ ratio: s.ratio, custom: s.custom }),
       // frameSize asserts the preset exists, so a ratio from an older build must not survive
       merge: (stored, current) => {

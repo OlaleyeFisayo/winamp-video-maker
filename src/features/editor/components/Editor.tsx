@@ -6,7 +6,7 @@ import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { useElementSize } from "../../../shared/lib/useElementSize"
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { usePreview } from "../../../shared/store/usePreview"
-import { TEMPLATES } from "../../../shared/lib/templates"
+import { findTemplate, useSavedSkins } from "../../../shared/store/useSavedSkins"
 import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { putFile } from "../../../shared/lib/sessionFiles"
@@ -103,15 +103,19 @@ export function Editor() {
 
   // the sidebar picks a template; the editor owns Webamp, so it does the loading
   const loadedTemplate = useRef<string | null>(null)
+  // a saved skin's blob URL is rebuilt asynchronously on boot, so re-run once it lands
+  const savedUrl = useSavedSkins((s) => s.urls[templateId])
   useEffect(() => {
     if (!supported || loadedTemplate.current === templateId) return
-    const template = TEMPLATES.find((t) => t.id === templateId)
+    const template = findTemplate(templateId)
     if (!template) return
     const first = loadedTemplate.current === null
     loadedTemplate.current = templateId
-    // the constructor loads the saved skin, so on the first pass only warm the picker
-    void (first ? prefetchSkins() : loadSkin(template))
-  }, [templateId])
+    // the constructor already loaded a bundled skin, so a first pass only warms the picker.
+    // A saved skin resolves after hydration, later than the constructor, so it still loads.
+    if (!first || template.url) void loadSkin(template)
+    if (first) void prefetchSkins()
+  }, [templateId, savedUrl])
 
   useEffect(() => {
     if (!supported || !stage.current) return

@@ -4,25 +4,32 @@
   "author": "Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite",
   "packageManager": "pnpm@11.10.0",
   "devEngines": {
-    "packageManager": { "name": "pnpm", "version": "11.10.0", "onFail": "error" }
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.10.0",
+      "onFail": "error"
+    }
   },
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "preinstall": "node scripts/require-pnpm.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "check:marketplace": "node scripts/check-marketplace.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.46.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.102.8",
     "mediabunny": "1.56.3",
     "mp4-muxer": "^5.2.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-router": "^8.3.1",
     "tailwindcss": "^4.3.3",
     "webamp": "^2.3.1",
     "zustand": "^5.0.15"

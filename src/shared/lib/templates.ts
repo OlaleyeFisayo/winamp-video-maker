@@ -1,4 +1,4 @@
-export type Template = { id: string; name: string; file: string }
+export type Template = { id: string; name: string; file?: string; url?: string }
 
 const DIR = "/default-templates"
 
@@ -14,6 +14,8 @@ export const TEMPLATES: readonly Template[] = [
   { id: "caesaramp", name: "CaesarAmp", file: "CaesarAmp.wsz" },
 ]
 
-export const templateUrl = (t: Template) => `${DIR}/${encodeURIComponent(t.file)}`
+/** A saved skin carries its own blob URL; a bundled one is a file under /default-templates. */
+export const templateUrl = (t: Template) => t.url ?? `${DIR}/${encodeURIComponent(t.file!)}`
 
 export const DEFAULT_TEMPLATE = TEMPLATES[0]
+

@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
 import { deleteFile, getFile, putFile } from "../lib/sessionFiles"
 
@@ -58,7 +59,7 @@ export const useCanvas = create<Canvas>()(
       setFit: (fit) => set({ fit }),
     }),
     {
-      name: "playerz-canvas",
+      name: key("canvas"),
       // the image is bytes, not JSON: it lives in the session file store and comes back
       // through restoreBackground below
       partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit }),
