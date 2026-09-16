@@ -27,9 +27,8 @@ const parseVisColors = (text: string) =>
       return `rgb(${r},${g},${b})`
     })
 
-/** Loads every sheet the renderer uses from a .wsz archive URL. Missing optional sheets are skipped. */
-export const loadSkin = async (archiveUrl: string): Promise<Skin> => {
-  const buffer = await (await fetch(archiveUrl)).arrayBuffer()
+/** Loads every sheet the renderer uses from .wsz bytes. Missing optional sheets are skipped. */
+export const loadSkinFromBuffer = async (buffer: ArrayBuffer): Promise<Skin> => {
   const entries = await readEntries(buffer, [...SHEETS])
   const sheets: Sheets = {}
   const text = new TextDecoder("latin1")
@@ -59,3 +58,7 @@ export const loadSkin = async (archiveUrl: string): Promise<Skin> => {
   }
   return { sheets, visColors, pledit }
 }
+
+/** Same, from a .wsz archive URL. */
+export const loadSkin = async (archiveUrl: string): Promise<Skin> =>
+  loadSkinFromBuffer(await (await fetch(archiveUrl)).arrayBuffer())
