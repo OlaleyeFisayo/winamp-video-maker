@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
 
 type Theme = "dark" | "light"
@@ -17,7 +18,7 @@ export const useTheme = create<ThemeStore>()(
       theme: systemTheme(),
       toggle: () => set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
     }),
-    { name: "playerz-theme" },
+    { name: key("theme") },
   ),
 )
 

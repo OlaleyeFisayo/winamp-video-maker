@@ -2,6 +2,7 @@ import Webamp from "webamp"
 import { useToast } from "../../../shared/store/useToast"
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { DEFAULT_TEMPLATE, TEMPLATES, templateUrl, type Template } from "../../../shared/lib/templates"
+import { findTemplate } from "../../../shared/store/useSavedSkins"
 import { skinThumbUrl } from "../../../shared/lib/skinThumb"
 
 type Action = { type: string; absolute?: boolean }
@@ -94,7 +95,7 @@ export const getWebamp = () => {
       .getState()
       .show(String(message) === "Not supported in Webamp" ? "That action isn't supported here." : String(message))
   instance = new Webamp({
-    initialSkin: { url: templateUrl(TEMPLATES.find((t) => t.id === useTemplate.getState().id) ?? DEFAULT_TEMPLATE) },
+    initialSkin: { url: templateUrl(findTemplate(useTemplate.getState().id) ?? DEFAULT_TEMPLATE) },
     windowLayout: {
       main: { position: { top: 0, left: 0 } },
       equalizer: { position: { top: 116, left: 0 } },

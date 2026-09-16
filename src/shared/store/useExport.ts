@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
 
 export type Fps = 30 | 60
@@ -46,7 +47,7 @@ export const useExport = create<Export>()(
       setRunner: (runner) => set({ runner }),
     }),
     {
-      name: "playerz-export",
+      name: key("export"),
       // settings only: a reload mid-run must not come back with the button stuck disabled,
       // and `selection` indexes a playlist that may no longer match
       partialize: (s) => ({ fps: s.fps, resolution: s.resolution, mode: s.mode }),

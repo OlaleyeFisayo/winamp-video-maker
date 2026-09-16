@@ -1,6 +1,7 @@
 import { create } from "zustand"
+import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
-import { DEFAULT_TEMPLATE, TEMPLATES } from "../lib/templates"
+import { DEFAULT_TEMPLATE } from "../lib/templates"
 
 type TemplateStore = {
   /** Id of the chosen skin; the editor loads it into Webamp. */
@@ -25,12 +26,14 @@ export const useTemplate = create<TemplateStore>()(
       setArchive: (archive) => set({ archive }),
     }),
     {
-      name: "playerz-template",
+      name: key("template"),
       // the id is enough: thumbs and archive are blob URLs, refetched from /public on boot
       partialize: (s) => ({ id: s.id }),
+      // a saved marketplace id is not in TEMPLATES and its store may not have hydrated yet,
+      // so any non-empty id is kept here; the editor falls back if it cannot resolve it
       merge: (stored, current) => {
         const id = (stored as { id?: string } | null)?.id
-        return { ...current, id: TEMPLATES.some((t) => t.id === id) ? id! : current.id }
+        return { ...current, id: id || current.id }
       },
     },
   ),

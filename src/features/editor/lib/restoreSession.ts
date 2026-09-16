@@ -1,6 +1,6 @@
 import type Webamp from "webamp"
 import { IMAGE_KEY, restoreBackground } from "../../../shared/store/useCanvas"
-import { clearExcept, deleteFile, getFile } from "../../../shared/lib/sessionFiles"
+import { clearExcept, deleteFile, getFile, listKeys } from "../../../shared/lib/sessionFiles"
 import { buildManifest, readManifest, writeManifest, type ManifestEntry } from "../../../shared/lib/trackManifest"
 
 /**
@@ -54,7 +54,9 @@ export const restoreSession = (webamp: Webamp) => (restored ??= restoreOnce(weba
 const restoreOnce = async (webamp: Webamp) => {
   const manifest = readManifest()
   // Prune before reading, in one transaction, so later uploads cannot be swept away.
-  await clearExcept([IMAGE_KEY, ...manifest.map((t) => t.id)])
+  // Saved skins are keyed `skin:` and are not session files — they outlive the playlist.
+  const skins = await listKeys("skin:")
+  await clearExcept([IMAGE_KEY, ...skins, ...manifest.map((t) => t.id)])
   await restoreBackground()
 
   const found: (ManifestEntry & { blob: Blob })[] = []

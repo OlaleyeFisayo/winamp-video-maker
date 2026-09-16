@@ -4,12 +4,14 @@
  * rather than from each add/remove/rename command.
  */
 
+import { key } from "./storageKeys"
+
 export type ManifestEntry = { id: string; title: string; selected?: boolean }
 
 /** A playlist row, narrowed to what the manifest needs. */
 type Row = { url: string; title: string }
 
-export const MANIFEST_KEY = "playerz-playlist"
+export const MANIFEST_KEY = key("playlist")
 
 /**
  * Rebuilds the manifest from the current playlist. `ids` maps a row's blob URL to the
