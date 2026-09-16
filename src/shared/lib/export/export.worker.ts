@@ -122,7 +122,7 @@ const run = async (msg: StartMessage) => {
     const t = f / fps
     let idx = starts.findIndex((s, i) => t >= s && t < s + tracks[i].duration)
     if (idx < 0) idx = tracks.length - 1
-    renderer.render(ctx, idx, t - starts[idx], t)
+    renderer.render(ctx, idx, t - starts[idx])
   }
   if (msg.background.mode === "transparent") return runTransparent(msg, canvas, renderFrame, frames)
 

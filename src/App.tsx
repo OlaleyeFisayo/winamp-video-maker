@@ -50,7 +50,10 @@ function App() {
       {/* ponytail: webamp cannot be disposed or remounted, so the editor is hidden, never unmounted */}
       <div
         className={cn(
-          "grid h-dvh grid-cols-[280px_1fr_280px] grid-rows-[56px_1fr]",
+          // stacked below md: the editor keeps a usable height and the panels flow beneath it
+          "flex h-dvh flex-col overflow-y-auto",
+          "md:grid md:grid-cols-[240px_1fr_240px] md:grid-rows-[56px_1fr] md:overflow-hidden",
+          "lg:grid-cols-[280px_1fr_280px]",
           marketplace && "hidden",
         )}
       >

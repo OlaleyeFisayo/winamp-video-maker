@@ -245,7 +245,7 @@ export function Editor() {
 
   if (!supported) {
     return (
-      <section className="grid place-items-center bg-graphite p-8">
+      <section className="grid place-items-center bg-graphite p-4 md:p-8">
         <p className="text-[15px] leading-normal text-ash">
           This browser can't run the player. Try Chrome, Edge or Firefox.
         </p>
@@ -258,8 +258,10 @@ export function Editor() {
       ref={section}
       className={cn(
         "grid overflow-hidden",
+        // stacked on mobile the editor has no row track to fill, so it carries its own height
+        !preview && "min-h-[60svh] md:min-h-0",
         // preview is the video and nothing else: black letterbox, no chrome, no padding
-        preview ? "grid-rows-1 bg-letterbox p-0" : "grid-rows-[1fr_auto_auto] bg-graphite p-8",
+        preview ? "grid-rows-1 bg-letterbox p-0" : "grid-rows-[1fr_auto_auto] bg-graphite p-4 md:p-8",
       )}
       onContextMenuCapture={(e) => {
         // the editor has no context menu; this also stops Webamp opening its own

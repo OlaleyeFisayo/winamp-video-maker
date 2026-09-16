@@ -76,28 +76,28 @@ export function MarketplacePage() {
 
   return (
     <div className="flex h-dvh flex-col bg-ink">
-      <header className="flex h-14 shrink-0 items-center gap-4 border-b border-rule px-4">
-        <Button variant="link" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate("/")} />
+      <header className="flex h-14 shrink-0 items-center gap-2 border-b border-rule px-4 md:gap-4">
+        <Button variant="link" aria-label="Back to editor" className="shrink-0 px-2 md:px-4" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate("/")} />
         <input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Search skins"
           aria-label="Search skins"
-          className="h-9 w-72 rounded-sm border border-rule bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+          className="h-9 w-full min-w-0 rounded-sm border border-rule md:w-72 bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
         />
         {total !== undefined && (
-          <span className="font-mono text-[13px] leading-[1.3] text-ash">
+          <span className="hidden shrink-0 font-mono text-[13px] leading-[1.3] text-ash sm:inline">
             {total.toLocaleString()} skins
           </span>
         )}
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
         <section className="flex flex-col gap-2">
           <div className="flex h-8 items-center">
             <Eyebrow>My skins</Eyebrow>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-4 md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
             <Dropzone
               accept=".wsz"
               onFiles={(files) => {
@@ -125,7 +125,7 @@ export function MarketplacePage() {
                 <IconButton
                   aria-label={`Remove ${skin.name}`}
                   title="Remove"
-                  className="absolute top-3 right-3 bg-ink/80"
+                  className="absolute top-3 right-3 size-9 bg-ink/80 md:size-8"
                   onClick={() => void removeSavedSkin(skin.id)}
                 >
                   <IconTrash size={14} stroke={1.5} aria-hidden />
@@ -151,7 +151,7 @@ export function MarketplacePage() {
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-4 md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
                 {skins.map((skin) => (
                   <SkinCard
                     key={skin.md5}
@@ -177,7 +177,7 @@ export function MarketplacePage() {
         </section>
       </div>
 
-      <p className="shrink-0 border-t border-rule px-6 py-3 text-[15px] leading-normal text-ash">
+      <p className="shrink-0 border-t border-rule px-4 py-3 text-[15px] leading-normal text-ash md:px-6">
         Skins from the{" "}
         <Link to="https://skins.webamp.org" target="_blank" rel="noreferrer noopener" className="underline hover:text-paper">
           Winamp Skin Museum

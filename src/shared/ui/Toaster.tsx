@@ -15,7 +15,7 @@ export function Toaster() {
       className="pointer-events-none fixed inset-x-0 top-6 z-50 flex flex-col items-center gap-2"
     >
       {progress && (
-        <div className={`${card} w-72 px-4 py-3`}>
+        <div className={`${card} w-72 max-w-[calc(100vw-32px)] px-4 py-3`}>
           <div className="flex items-center justify-between gap-3">
             <span className="min-w-0 truncate">{progress.label}</span>
             <span className="flex shrink-0 items-center gap-3">
@@ -47,9 +47,9 @@ export function Toaster() {
         </div>
       )}
       {toasts.map((t) => (
-        <div key={t.id} className={`${card} flex items-center gap-2 py-2 pl-4 pr-2`}>
+        <div key={t.id} className={`${card} flex max-w-[calc(100vw-32px)] items-center gap-2 py-2 pl-4 pr-2`}>
           {t.message}
-          <IconButton aria-label="Dismiss" onClick={() => dismiss(t.id)} className="size-7">
+          <IconButton aria-label="Dismiss" onClick={() => dismiss(t.id)} className="size-9 md:size-7">
             <IconX size={14} stroke={1.5} aria-hidden />
           </IconButton>
         </div>

@@ -152,7 +152,7 @@ export const drawEq = (ctx: Ctx, skin: Skin, st: SkinState) => {
   }
 }
 
-export const drawPlaylist = (ctx: Ctx, skin: Skin, tracks: TrackInfo[], current: number, t: number) => {
+export const drawPlaylist = (ctx: Ctx, skin: Skin, tracks: TrackInfo[], current: number) => {
   const sheet = skin.sheets["pledit.bmp"]
   if (!sheet) return
   ctx.fillStyle = skin.pledit.normalBg
@@ -194,6 +194,7 @@ export const drawPlaylist = (ctx: Ctx, skin: Skin, tracks: TrackInfo[], current:
   })
   ctx.restore()
 
-  const total = tracks.reduce((a, b) => a + b.duration, 0)
-  drawText(ctx, skin, `${mmss(t)}/${mmss(total)}`, PL.miniTime[0], PL.miniTime[1])
+  // Winamp shows the selected tracks' summed duration here, not a clock; the editor selects
+  // the playing row (CLICKED_TRACK), so that is one track's length
+  drawText(ctx, skin, mmss(tracks[current]?.duration ?? 0), PL.miniTime[0], PL.miniTime[1])
 }

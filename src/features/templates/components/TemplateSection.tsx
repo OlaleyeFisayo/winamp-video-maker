@@ -35,7 +35,7 @@ export function TemplateSection() {
           to="/marketplace"
           title="Marketplace"
           aria-label="Marketplace"
-          className="inline-flex size-8 items-center justify-center rounded-sm border border-transparent text-ash transition-colors duration-100 hover:border-rule hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+          className="inline-flex size-9 items-center justify-center rounded-sm border border-transparent text-ash transition-colors duration-100 hover:border-rule hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 md:size-8"
         >
           <IconBuildingStore size={16} stroke={1.5} aria-hidden />
         </Link>

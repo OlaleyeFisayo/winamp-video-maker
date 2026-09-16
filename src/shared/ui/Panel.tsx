@@ -7,8 +7,9 @@ export function Panel({ side, className, ...rest }: Props) {
   return (
     <aside
       className={cn(
-        "flex flex-col gap-6 overflow-y-auto border-rule bg-ink p-4",
-        side === "left" ? "border-r" : "border-l",
+        // stacked on mobile the panel scrolls with the page and divides with a top rule
+        "flex flex-col gap-6 border-t border-rule bg-ink p-4 md:border-t-0 md:overflow-y-auto",
+        side === "left" ? "md:border-r" : "md:border-l",
         className,
       )}
       {...rest}
