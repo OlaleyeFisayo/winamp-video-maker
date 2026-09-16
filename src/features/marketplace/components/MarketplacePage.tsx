@@ -77,9 +77,7 @@ export function MarketplacePage() {
   return (
     <div className="flex h-dvh flex-col bg-ink">
       <header className="flex h-14 shrink-0 items-center gap-4 border-b border-rule px-4">
-        <Button variant="link" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate("/")}>
-          Editor
-        </Button>
+        <Button variant="link" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate("/")} />
         <input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
