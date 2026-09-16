@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react"
+import { IconMinimize } from "@tabler/icons-react"
+import { IconButton } from "../../../shared/ui"
 import Webamp from "webamp"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
@@ -19,6 +21,10 @@ import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
 
 const supported = Webamp.browserIsSupported()
+
+/** iOS Safari exposes fullscreen on <video> only, so arbitrary elements have no request method. */
+const nativeFullscreen =
+  typeof Element !== "undefined" && !!Element.prototype.requestFullscreen && document.fullscreenEnabled
 
 /** Skin stack size at 1x: main, equalizer and playlist windows, 275 wide, 116 tall each. */
 const SKIN_W = 275
@@ -86,12 +92,15 @@ export function Editor() {
   }, [])
 
   // fullscreen goes on the whole editor, so the frame keeps sizing from container units
-  // and the transport and timeline come with it
+  // and the transport and timeline come with it.
+  // ponytail: iOS Safari has no Element.requestFullscreen (only <video> gets webkit's), so
+  // calling it throws synchronously past .catch and crashes the boundary. Feature-detect and
+  // let the fixed-overlay classes below stand in; drop this when iOS ships the real API.
   useEffect(() => {
     const el = section.current
-    if (!el) return
+    if (!el || !nativeFullscreen) return
     if (preview && document.fullscreenElement !== el) void el.requestFullscreen().catch(() => {})
-    if (!preview && document.fullscreenElement === el) void document.exitFullscreen().catch(() => {})
+    if (!preview && document.fullscreenElement === el) void document.exitFullscreen?.().catch(() => {})
   }, [preview])
 
   // Esc and the browser's own exit bypass our button, so mirror the real state back
@@ -260,8 +269,12 @@ export function Editor() {
         "grid overflow-hidden",
         // stacked on mobile the editor has no row track to fill, so it carries its own height
         !preview && "min-h-[60svh] md:min-h-0",
-        // preview is the video and nothing else: black letterbox, no chrome, no padding
-        preview ? "grid-rows-1 bg-letterbox p-0" : "grid-rows-[1fr_auto_auto] bg-graphite p-4 md:p-8",
+        // preview is the video and nothing else: black letterbox, no chrome, no padding.
+        // The fixed inset covers the screen where native fullscreen is unavailable (iOS) and
+        // is harmless where it is: the fullscreen element already fills the viewport.
+        preview
+          ? "fixed inset-0 z-50 grid-rows-1 bg-letterbox p-0"
+          : "relative grid-rows-[1fr_auto_auto] bg-graphite p-4 md:p-8",
       )}
       onContextMenuCapture={(e) => {
         // the editor has no context menu; this also stops Webamp opening its own
@@ -305,6 +318,17 @@ export function Editor() {
           <Transport />
           <Timeline />
         </>
+      )}
+      {/* without native fullscreen there is no Esc and no browser chrome to escape with,
+          so the fallback overlay carries its own way out */}
+      {preview && !nativeFullscreen && (
+        <IconButton
+          aria-label="Exit fullscreen"
+          onClick={() => usePreview.getState().toggle()}
+          className="absolute top-4 right-4 bg-ink/70 text-paper"
+        >
+          <IconMinimize size={16} stroke={1.5} aria-hidden />
+        </IconButton>
       )}
     </section>
   )
