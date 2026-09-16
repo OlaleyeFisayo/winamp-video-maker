@@ -29,7 +29,7 @@ Export requires browser support for WebCodecs; transparent WebM additionally req
 
 ## Local development
 
-Use **pnpm 11.10.0** and Node.js 22.22.1 or a newer Vite-compatible version. Install pnpm using its [installation instructions](https://pnpm.io/installation).
+Use **pnpm** (any recent version) and Node.js 22.22.1 or a newer Vite-compatible version. Install pnpm using its [installation instructions](https://pnpm.io/installation).
 
 ```sh
 pnpm install
