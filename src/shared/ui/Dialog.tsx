@@ -39,7 +39,7 @@ export function Dialog({ open, onClose, title, children, footer }: Props) {
           <IconX size={16} stroke={1.5} aria-hidden />
         </IconButton>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto p-6">{children}</div>
+      <div className="flex min-h-0 flex-col gap-6 overflow-y-auto p-6">{children}</div>
       {footer && <div className="flex shrink-0 justify-end gap-2 border-t border-rule p-4">{footer}</div>}
     </dialog>
   )
