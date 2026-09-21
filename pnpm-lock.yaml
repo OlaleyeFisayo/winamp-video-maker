@@ -219,6 +219,9 @@ importers:
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1(react@19.3.0)
+      client-zip:
+        specifier: ^2.5.1
+        version: 2.5.1
       mediabunny:
         specifier: 1.56.3
         version: 1.56.3
@@ -868,6 +871,9 @@ packages:
 
   caniuse-lite@1.0.30001810:
     resolution: {integrity: sha512-TITQPUkaz+aVk5GL6NhOdwk1aEaNTSDPsGFWrTuhKGtjTF70jL/Oht2W4c6rXUe5fu7Ie19VIahAXHIIiWWNeg==}
+
+  client-zip@2.5.1:
+    resolution: {integrity: sha512-yOvNSBsQX1B7wtdvIVXJEIIShrlPiX+adhli7sWvQhsx3nX1DjvpSt+AwOxaX+3DCsT/Yx0nRy5hIjRLIYfebw==}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -2019,6 +2025,8 @@ snapshots:
       qified: 0.10.1
 
   caniuse-lite@1.0.30001810: {}
+
+  client-zip@2.5.1: {}
 
   convert-source-map@2.0.0: {}
 
