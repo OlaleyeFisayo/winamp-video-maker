@@ -76,6 +76,12 @@ export const runExport = async (req: ExportRequest) => {
     const { width, height } = exportSize(frameSize(useFrame.getState()), req.resolution)
     const skin = snapshotSkinState()
 
+    // Context rows for the playlist window: every workspace track, not just the encoded ones.
+    // Only titles and durations are drawn, so the rows that are never decoded borrow the
+    // encoded track's bitrate fields rather than forcing a decode nothing would show.
+    // "all" already renders the whole selection, so the toggle is a no-op there.
+    const showPlaylist = req.fullTracklist && req.mode !== "all"
+
     const totalFrames = segments.reduce(
       (a, s) => a + Math.ceil(s.trackIndices.reduce((d, i) => d + decoded.get(i)!.duration, 0) * req.fps),
       0,
@@ -103,6 +109,18 @@ export const runExport = async (req: ExportRequest) => {
           background: { mode: canvas.mode, color: canvas.color, image, fit: canvas.fit },
           skin,
           tracks: tracks.map((t) => ({ title: t.title, duration: t.duration, kbps: t.kbps, sampleRate: t.sampleRate, channels: t.channels })),
+          playlist: showPlaylist
+            ? {
+                tracks: audio.tracks.map((t) => ({
+                  title: t.title,
+                  duration: t.duration ?? 0,
+                  kbps: tracks[0].kbps,
+                  khz: tracks[0].sampleRate / 1000,
+                  channels: tracks[0].channels.length,
+                })),
+                offset: seg.trackIndices[0],
+              }
+            : undefined,
         }
         worker.onmessage = (e: MessageEvent<WorkerOut>) => {
           const m = e.data

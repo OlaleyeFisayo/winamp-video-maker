@@ -20,6 +20,11 @@ export type Scene = {
   background: Background
   skin: SkinState
   tracks: SceneTrack[]
+  /**
+   * Rows for the playlist window when they differ from `tracks`, with `offset` marking where
+   * `tracks` sits inside them. Absent draws `tracks` itself, as the editor's preview does.
+   */
+  playlist?: { tracks: TrackInfo[]; offset: number }
 }
 
 /** Draws one frame: background, then the skin stack scaled the way the editor shows it. */
@@ -58,6 +63,10 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
   return {
     render(ctx: OffscreenCanvasRenderingContext2D, trackIndex: number, trackTime: number) {
       const track = scene.tracks[trackIndex]
+      // the row this track occupies in the playlist being drawn, which is its real workspace
+      // position when the full tracklist is shown
+      const rows = scene.playlist?.tracks ?? scene.tracks
+      const rowIndex = scene.playlist ? scene.playlist.offset + trackIndex : trackIndex
       const at = Math.floor(trackTime * track.sampleRate)
       const vis = scene.skin.vis === 0 ? spectrum(track.mono, at) : scene.skin.vis === 1 ? oscilloscope(track.mono, at) : null
 
@@ -65,7 +74,7 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
       let y = 0
       if (open[0]) {
         sctx.save(); sctx.translate(0, y)
-        drawMain(sctx, skin, scene.skin, track, trackIndex, trackTime, vis)
+        drawMain(sctx, skin, scene.skin, track, rowIndex, trackTime, vis)
         sctx.restore(); y += WIN_H
       }
       if (open[1]) {
@@ -75,7 +84,7 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
       }
       if (open[2]) {
         sctx.save(); sctx.translate(0, y)
-        drawPlaylist(sctx, skin, scene.tracks, trackIndex)
+        drawPlaylist(sctx, skin, rows, rowIndex)
         sctx.restore()
       }
 

@@ -11,6 +11,11 @@ const MODES = [
   { value: "selected", label: "Selected" },
 ] as const
 
+const PLAYLIST = [
+  { value: "off", label: "Just the track" },
+  { value: "on", label: "Full tracklist" },
+] as const
+
 const FPS = [
   { value: "30", label: "30" },
   { value: "60", label: "60" },
@@ -27,7 +32,7 @@ const field =
   "h-9 w-full rounded-sm border border-rule bg-graphite px-3 font-mono text-[13px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
 
 export function ExportDialog() {
-  const { open, fps, resolution, mode, selection, running, runner, setOpen, setFps, setResolution, setMode, setSelection } =
+  const { open, fps, resolution, mode, selection, fullTracklist, running, runner, setOpen, setFps, setResolution, setMode, setSelection, setFullTracklist } =
     useExport()
   const tracks = useAudio((s) => s.tracks)
   const transparent = useCanvas((s) => s.mode === "transparent")
@@ -46,7 +51,7 @@ export function ExportDialog() {
     if (!canExport) return
     const indices = effectiveMode === "selected" ? parsed!.indices! : tracks.map((_, i) => i + 1)
     setOpen(false)
-    void runner!({ mode: effectiveMode, indices, fps, resolution })
+    void runner!({ mode: effectiveMode, indices, fps, resolution, fullTracklist })
   }
 
   return (
@@ -89,6 +94,23 @@ export function ExportDialog() {
               </p>
             </>
           )}
+        </div>
+      )}
+      {/* "all" already draws the whole playlist, so the choice only exists for per-track videos */}
+      {multi && effectiveMode !== "all" && (
+        <div className="flex flex-col gap-2">
+          <Eyebrow>Playlist window</Eyebrow>
+          <Segmented
+            options={PLAYLIST}
+            value={fullTracklist ? "on" : "off"}
+            onChange={(v) => setFullTracklist(v === "on")}
+            aria-label="Playlist window"
+          />
+          <p className="text-[15px] leading-normal text-ash">
+            {fullTracklist
+              ? "Shows every track in the playlist. Only the exported track's audio is included."
+              : "Shows only the track being exported."}
+          </p>
         </div>
       )}
       <div className="flex flex-col gap-2">

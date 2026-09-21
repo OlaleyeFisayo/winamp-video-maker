@@ -13,6 +13,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 - Choose portrait, landscape, square, or custom frames and adjust the player size.
 - Use a colour, image, or transparent background and preview fullscreen.
 - Export your playlist as one video, each track separately, or selected tracks at 30/60 fps and 720p through 4K.
+- Show the full tracklist in the player on per-track exports, so a single-track video still shows the rest of the playlist.
 - Download MP4 for colour/image backgrounds or transparent WebM on supported browsers. Rendering happens locally in browser workers.
 - Restore your saved tracks and editor settings after a reload; switch between dark and light themes.
 

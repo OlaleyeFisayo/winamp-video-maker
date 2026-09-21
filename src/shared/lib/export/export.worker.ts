@@ -3,7 +3,7 @@ import { ArrayBufferTarget, Muxer } from "mp4-muxer"
 import { AudioSample, AudioSampleSource, BufferTarget, CanvasSource, Output, Quality, WebMOutputFormat, canEncodeAudio, canEncodeVideo } from "mediabunny"
 import { loadSkin } from "./renderer/skin"
 import { createRenderer, type Background, type Scene } from "./renderer/compose"
-import type { SkinState } from "./renderer/windows"
+import type { SkinState, TrackInfo } from "./renderer/windows"
 
 export type WorkerTrack = {
   title: string
@@ -22,7 +22,14 @@ export type StartMessage = {
   scale: number
   background: Background
   skin: SkinState
+  /** The audio to encode. Drives the video's length and the visualiser. */
   tracks: WorkerTrack[]
+  /**
+   * Rows to draw in the playlist window when they differ from the tracks being encoded, so a
+   * single-track export can still show the whole workspace. `offset` is where `tracks` starts
+   * within them. Absent means the encoded tracks are the playlist, as before.
+   */
+  playlist?: { tracks: TrackInfo[]; offset: number }
 }
 
 export type WorkerOut =
@@ -111,7 +118,8 @@ const run = async (msg: StartMessage) => {
     for (const ch of t.channels) for (let i = 0; i < mono.length; i++) mono[i] += ch[i] / t.channels.length
     return { title: t.title, duration: t.duration, kbps: t.kbps, khz: t.sampleRate / 1000, channels: t.channels.length, mono, sampleRate: t.sampleRate }
   })
-  const scene: Scene = { width, height, scale: msg.scale, background: msg.background, skin: msg.skin, tracks }
+  // `tracks` alone drives length and timing below; `playlist` only changes what is drawn
+  const scene: Scene = { width, height, scale: msg.scale, background: msg.background, skin: msg.skin, tracks, playlist: msg.playlist }
   const renderer = createRenderer(skin, scene)
   const total = tracks.reduce((a, t) => a + t.duration, 0)
   const canvas = new OffscreenCanvas(width, height)
