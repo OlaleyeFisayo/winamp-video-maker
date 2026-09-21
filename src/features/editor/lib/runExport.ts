@@ -8,6 +8,7 @@ import { useToast } from "../../../shared/store/useToast"
 import { exportSize } from "../../../shared/lib/presets"
 import { decodeTrack, transferables, type DecodedTrack } from "../../../shared/lib/export/audio"
 import type { StartMessage, WorkerOut } from "../../../shared/lib/export/export.worker"
+import { downloadZip } from "client-zip"
 import { snapshotSkinState } from "./webamp"
 
 const supported = () =>
@@ -79,6 +80,8 @@ export const runExport = async (req: ExportRequest) => {
       (a, s) => a + Math.ceil(s.trackIndices.reduce((d, i) => d + decoded.get(i)!.duration, 0) * req.fps),
       0,
     )
+    // finished videos are held until every lane is done, so a multi-track run can be zipped
+    const results = new Map<number, { blob: Blob; name: string }>()
     const done = new Map<number, number>()
     const report = () => {
       const frames = [...done.values()].reduce((a, b) => a + b, 0)
@@ -107,7 +110,12 @@ export const runExport = async (req: ExportRequest) => {
             done.set(index, m.frames)
             report()
           } else if (m.type === "done") {
-            if (!cancelled) download(new Blob([m.buffer], { type: `video/${m.format}` }), `${safeName(seg.name)}.${m.format}`)
+            if (!cancelled) {
+              results.set(index, {
+                blob: new Blob([m.buffer], { type: `video/${m.format}` }),
+                name: `${safeName(seg.name)}.${m.format}`,
+              })
+            }
             worker.terminate()
             resolve()
           } else if (m.type === "cancelled") {
@@ -143,7 +151,32 @@ export const runExport = async (req: ExportRequest) => {
       }
     }
     await Promise.all(Array.from({ length: lanes }, lane))
-    if (cancelled) toast.show("Export was cancelled.")
+    if (cancelled) {
+      toast.show("Export was cancelled.")
+      return
+    }
+
+    // segments finish out of playlist order, so deliver them sorted
+    const ordered = [...results.entries()].sort(([a], [b]) => a - b).map(([, v]) => v)
+    results.clear()
+    if (ordered.length === 1) {
+      download(ordered[0].blob, ordered[0].name)
+    } else if (ordered.length > 1) {
+      toast.setProgressLabel("Packaging zip")
+      // numbered so the archive sorts, and so two tracks sharing a title stay distinct
+      const width = String(ordered.length).length
+      // ponytail: yielded one at a time, dropping each reference as it goes, so client-zip
+      // streams the archive instead of every video sitting in memory at once
+      const stream = async function* () {
+        for (let i = 0; i < ordered.length; i++) {
+          const { blob, name } = ordered[i]
+          ordered[i] = null as never
+          yield { name: `${String(i + 1).padStart(width, "0")} ${name}`, input: blob }
+        }
+      }
+      const zip = await downloadZip(stream()).blob()
+      download(zip, `${safeName(useProject.getState().name.trim() || "untitled")}.zip`)
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg === "cancelled") toast.show("Export was cancelled.")
