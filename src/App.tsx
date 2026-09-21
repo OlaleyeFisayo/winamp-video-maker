@@ -1,6 +1,6 @@
 import "./shared/store/useTheme"
 import { Component, lazy, Suspense, useEffect, type ReactNode } from "react"
-import { useLocation } from "react-router"
+import { Navigate, Route, Routes } from "react-router"
 import { Header } from "./features/header"
 import { TracksSection } from "./features/audio"
 import { TemplateSection } from "./features/templates"
@@ -11,6 +11,7 @@ import { HelpDialog } from "./features/help"
 import { Button, Panel, Toaster } from "./shared/ui"
 import { cn } from "./shared/lib/cn"
 import { hydrateSavedSkins } from "./shared/store/useSavedSkins"
+import { ROUTES } from "./shared/lib/routes"
 
 const Editor = lazy(() => import("./features/editor").then((module) => ({ default: module.Editor })))
 const Marketplace = lazy(() =>
@@ -37,9 +38,50 @@ class EditorBoundary extends Component<{ children: ReactNode }, { failed: boolea
   }
 }
 
-function App() {
-  const marketplace = useLocation().pathname === "/marketplace"
+function EditorPage() {
+  return (
+    <div
+      className={cn(
+        // stacked below md: the editor keeps a usable height and the panels flow beneath it
+        "flex h-dvh flex-col overflow-y-auto",
+        "md:grid md:grid-cols-[240px_1fr_240px] md:grid-rows-[56px_1fr] md:overflow-hidden",
+        "lg:grid-cols-[280px_1fr_280px]",
+      )}
+    >
+      <Header />
+      <Panel side="left">
+        <TemplateSection />
+        <TracksSection />
+      </Panel>
+      <EditorBoundary>
+        <Suspense fallback={<section role="status" className="grid place-items-center bg-graphite p-8 text-ash">Loading editor…</section>}>
+          <Editor />
+        </Suspense>
+      </EditorBoundary>
+      <Panel side="right">
+        <FrameSection />
+        <SizeSection />
+        <BackgroundSection />
+      </Panel>
+    </div>
+  )
+}
 
+function MarketplaceRoute() {
+  return (
+    <Suspense
+      fallback={
+        <div role="status" className="grid h-dvh place-items-center bg-ink text-ash">
+          Loading marketplace…
+        </div>
+      }
+    >
+      <Marketplace />
+    </Suspense>
+  )
+}
+
+function App() {
   // saved skins keep their bytes in IndexedDB; their blob URLs are rebuilt once per load
   useEffect(() => {
     void hydrateSavedSkins()
@@ -47,43 +89,12 @@ function App() {
 
   return (
     <>
-      {/* ponytail: webamp cannot be disposed or remounted, so the editor is hidden, never unmounted */}
-      <div
-        className={cn(
-          // stacked below md: the editor keeps a usable height and the panels flow beneath it
-          "flex h-dvh flex-col overflow-y-auto",
-          "md:grid md:grid-cols-[240px_1fr_240px] md:grid-rows-[56px_1fr] md:overflow-hidden",
-          "lg:grid-cols-[280px_1fr_280px]",
-          marketplace && "hidden",
-        )}
-      >
-        <Header />
-        <Panel side="left">
-          <TemplateSection />
-          <TracksSection />
-        </Panel>
-        <EditorBoundary>
-          <Suspense fallback={<section role="status" className="grid place-items-center bg-graphite p-8 text-ash">Loading editor…</section>}>
-            <Editor />
-          </Suspense>
-        </EditorBoundary>
-        <Panel side="right">
-          <FrameSection />
-          <SizeSection />
-          <BackgroundSection />
-        </Panel>
-      </div>
-      {marketplace && (
-        <Suspense
-          fallback={
-            <div role="status" className="grid h-dvh place-items-center bg-ink text-ash">
-              Loading marketplace…
-            </div>
-          }
-        >
-          <Marketplace />
-        </Suspense>
-      )}
+      <Routes>
+        <Route path={ROUTES.home} element={<EditorPage />} />
+        <Route path={ROUTES.marketplace} element={<MarketplaceRoute />} />
+        {/* an unknown URL lands on the editor rather than a blank page */}
+        <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
+      </Routes>
       <ExportDialog />
       <HelpDialog />
       <Toaster />

@@ -7,6 +7,7 @@ import { useTemplate } from "../../../shared/store/useTemplate"
 import { removeSavedSkin, useSavedSkins } from "../../../shared/store/useSavedSkins"
 import { countSkins, listSkins, PAGE, searchSkins } from "../lib/museum"
 import { adoptMuseumSkin, adoptUploadedSkin } from "../lib/adoptSkin"
+import { ROUTES } from "../../../shared/lib/routes"
 import { SkinCard } from "./SkinCard"
 
 const REJECT = "That file isn't a .wsz skin."
@@ -71,13 +72,13 @@ export function MarketplacePage() {
     setBusy(id)
     const ok = await run()
     setBusy(null)
-    if (ok) void navigate("/")
+    if (ok) void navigate(ROUTES.home)
   }
 
   return (
     <div className="flex h-dvh flex-col bg-ink">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-rule px-4 md:gap-4">
-        <Button variant="link" aria-label="Back to editor" className="shrink-0 px-2 md:px-4" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate("/")} />
+        <Button variant="link" aria-label="Back to editor" className="shrink-0 px-2 md:px-4" icon={<IconArrowLeft size={16} stroke={1.5} aria-hidden />} onClick={() => void navigate(ROUTES.home)} />
         <input
           value={term}
           onChange={(e) => setTerm(e.target.value)}
@@ -119,7 +120,7 @@ export function MarketplacePage() {
                   busy={busy === skin.id}
                   onClick={() => {
                     useTemplate.getState().setId(skin.id)
-                    void navigate("/")
+                    void navigate(ROUTES.home)
                   }}
                 />
                 <IconButton

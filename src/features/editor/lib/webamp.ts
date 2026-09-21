@@ -188,8 +188,21 @@ export const loadSkin = async (template: Template) => {
   }
 }
 
-/** Renders into `node` the first time only; StrictMode double effects reuse the same promise. */
-export const renderOnce = (node: HTMLElement) => (rendered ??= getWebamp().renderInto(node))
+// ponytail: the stage outlives the route it is shown on, so webamp renders into a node React
+// never owns. Routing unmounts <Editor>; this div survives and is re-parented by the next one.
+let stageNode: HTMLDivElement | undefined
+
+/** The one node webamp ever renders into. Re-parented by whichever <Editor> is mounted. */
+export const getStage = () => {
+  if (!stageNode) {
+    stageNode = document.createElement("div")
+    stageNode.className = "relative h-87 w-68.75"
+  }
+  return stageNode
+}
+
+/** Renders into the persistent stage once; StrictMode double effects reuse the same promise. */
+export const renderOnce = () => (rendered ??= getWebamp().renderInto(getStage()))
 
 /** Empties the skin playlist without touching playback state; used to rebuild it after a removal. */
 export const clearPlaylist = () => dispatch?.({ type: "REMOVE_ALL_TRACKS" })
