@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { IconMusic, IconPlayerPlay, IconPlus, IconX } from "@tabler/icons-react"
+import { IconGripVertical, IconMusic, IconPlayerPlay, IconPlus, IconX } from "@tabler/icons-react"
 import { Dropzone, IconButton, PanelSection } from "../../../shared/ui"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
 import { useProject } from "../../../shared/store/useProject"
@@ -39,18 +39,66 @@ function TrackName({ title, onRename }: NameProps) {
   )
 }
 
-type RowProps = { track: Track; index: number; active: boolean }
+type RowProps = {
+  track: Track
+  index: number
+  active: boolean
+  count: number
+  draggingRef: { current: number | null }
+}
 
-function Row({ track: t, index: i, active }: RowProps) {
+function Row({ track: t, index: i, active, count, draggingRef }: RowProps) {
   const enqueue = useAudio((s) => s.enqueue)
+  const [over, setOver] = useState(false)
+  const move = (to: number) => {
+    if (to < 0 || to >= count || to === i) return
+    enqueue({ type: "move", from: i, to })
+  }
   return (
     <li
       data-active={active || undefined}
+      onDragOver={(e) => {
+        if (draggingRef.current === null || draggingRef.current === i) return
+        // without preventDefault the browser refuses the drop
+        e.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setOver(false)
+        const from = draggingRef.current
+        draggingRef.current = null
+        // the dragged row is `from`; this row is where it lands
+        if (from !== null && from !== i) enqueue({ type: "move", from, to: i })
+      }}
       className={cn(
-        "flex h-11 shrink-0 items-center gap-2 rounded-sm border bg-graphite pl-2 pr-1 transition-colors duration-100 md:h-9",
-        active ? "border-contrast" : "border-rule",
+        "flex h-11 shrink-0 items-center gap-1 rounded-sm border bg-graphite px-1 transition-colors duration-100 md:h-9",
+        over ? "border-paper" : active ? "border-contrast" : "border-rule",
       )}
     >
+      {/* the handle drags, not the row: a draggable ancestor breaks text selection in the name input */}
+      <button
+        type="button"
+        draggable
+        aria-label={`Reorder ${t.title}`}
+        onDragStart={() => {
+          draggingRef.current = i
+        }}
+        onDragEnd={() => {
+          draggingRef.current = null
+          setOver(false)
+        }}
+        onKeyDown={(e) => {
+          const dir = e.altKey ? (e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0) : 0
+          if (!dir) return
+          e.preventDefault()
+          move(i + dir)
+        }}
+        className="flex size-9 shrink-0 cursor-grab items-center justify-center rounded-xs text-ash hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 active:cursor-grabbing md:size-6"
+      >
+        <IconGripVertical size={14} stroke={1.5} aria-hidden />
+      </button>
       <button
         type="button"
         aria-label={`Play ${t.title}`}
@@ -76,6 +124,7 @@ export function TracksSection() {
   const { tracks, current, enqueue } = useAudio()
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLOListElement>(null)
+  const dragging = useRef<number | null>(null)
   const [skipped, setSkipped] = useState(false)
 
   useEffect(() => {
@@ -138,7 +187,7 @@ export function TracksSection() {
         // 5 rows plus 4 gaps of 8px; more than that scrolls. Rows are 44px on touch, 36px from md
         <ol ref={list} className="flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-53">
           {tracks.map((t, i) => (
-            <Row key={t.id} track={t} index={i} active={i === current} />
+            <Row key={t.url} track={t} index={i} active={i === current} count={tracks.length} draggingRef={dragging} />
           ))}
         </ol>
       )}

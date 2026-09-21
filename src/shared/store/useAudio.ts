@@ -10,6 +10,7 @@ export type Command =
   /** `ids` names the session-file record each file was stored under, in the same order. */
   | { type: "add"; files: File[]; ids: string[] }
   | { type: "remove"; index: number }
+  | { type: "move"; from: number; to: number }
   | { type: "play"; index: number }
   | { type: "rename"; index: number; title: string }
   | { type: "toggle" }

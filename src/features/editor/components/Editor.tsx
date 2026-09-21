@@ -49,6 +49,25 @@ const readPlaylist = (webamp: Webamp): Track[] =>
     duration: t.duration,
   }))
 
+/**
+ * Replaces the playlist with `next`, without setTracksToPlay so nothing auto-plays.
+ * If the track at `keep` was playing it resumes, wherever it landed in the new order.
+ */
+const rebuild = (webamp: Webamp, next: Track[], keep: number | null) => {
+  const tracks = readPlaylist(webamp)
+  const playing = webamp.getMediaStatus() === "PLAYING" && keep !== null
+  const keepUrl = playing ? (tracks[keep]?.url ?? null) : null
+  webamp.stop()
+  clearPlaylist()
+  if (next.length) webamp.appendTracks(next.map(toUrlTrack))
+  if (!keepUrl) return
+  const again = webamp.getPlaylistTracks().find((t) => t.url === keepUrl)
+  if (again) {
+    webamp.setCurrentTrack(again.id)
+    webamp.play()
+  }
+}
+
 const same = (a: Track[], b: Track[]) =>
   a.length === b.length &&
   a.every((t, i) => t.id === b[i].id && t.title === b[i].title && t.duration === b[i].duration)
@@ -206,20 +225,13 @@ export function Editor() {
         webamp.appendTracks(c.files.map(toBlobTrack))
         trackAppended(webamp, c.ids)
       } else if (c.type === "remove") {
-        // rebuild without setTracksToPlay so nothing auto-plays; resume the same track if it was playing
-        const wasPlaying = webamp.getMediaStatus() === "PLAYING" && current !== null && current !== c.index
-        const keepUrl = wasPlaying ? tracks[current].url : null
-        webamp.stop()
-        clearPlaylist()
-        const rest = tracks.filter((_, i) => i !== c.index)
-        if (rest.length) webamp.appendTracks(rest.map(toUrlTrack))
-        if (keepUrl) {
-          const again = webamp.getPlaylistTracks().find((t) => t.url === keepUrl)
-          if (again) {
-            webamp.setCurrentTrack(again.id)
-            webamp.play()
-          }
-        }
+        rebuild(webamp, tracks.filter((_, i) => i !== c.index), current === c.index ? null : current)
+      } else if (c.type === "move") {
+        const { from, to } = c
+        if (from === to || !tracks[from] || to < 0 || to >= tracks.length) continue
+        const next = [...tracks]
+        next.splice(to, 0, ...next.splice(from, 1))
+        rebuild(webamp, next, current)
       } else if (c.type === "toggle") {
         // while stopped, setCurrentTrack only selects; play() is what starts it
         if (webamp.getMediaStatus() === "PLAYING") webamp.pause()
