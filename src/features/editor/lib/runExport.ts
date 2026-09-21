@@ -18,7 +18,10 @@ const TRANSPARENCY_ERROR = "Transparent WebM export isn't supported here. Try Ch
 
 // characters Windows and macOS refuse in file names; the backslash is built by code to dodge escaping
 const BAD_CHARS = new RegExp(`[${"\\"}/:*?"<>|]+`, "g")
-const safeName = (s: string) => s.replace(BAD_CHARS, "-").replace(/\s+/g, " ").trim() || "video"
+// a name of only illegal characters collapses to bare separators, which is no name at all,
+// so the branded default stands in rather than shipping a file called "-.mp4"
+const safeName = (s: string, fallback = DEFAULT_NAME) =>
+  s.replace(BAD_CHARS, "-").replace(/\s+/g, " ").replace(/^[-\s.]+|[-\s.]+$/g, "").trim() || fallback
 
 const download = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob)
@@ -59,7 +62,7 @@ export const runExport = async (req: ExportRequest) => {
     const segments: Segment[] =
       req.mode === "all"
         ? [{ name: project, trackIndices: req.indices.map((n) => n - 1) }]
-        : req.indices.map((n) => ({ name: audio.tracks[n - 1].title, trackIndices: [n - 1] }))
+        : req.indices.map((n) => ({ name: audio.tracks[n - 1].title || DEFAULT_NAME, trackIndices: [n - 1] }))
 
     toast.startProgress(`Exporting ${segments[0].name}`, cancel)
 
@@ -193,7 +196,7 @@ export const runExport = async (req: ExportRequest) => {
         }
       }
       const zip = await downloadZip(stream()).blob()
-      download(zip, `${safeName(useProject.getState().name.trim() || "untitled")}.zip`)
+      download(zip, `${safeName(project)}.zip`)
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)

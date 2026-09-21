@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { IconGripVertical, IconMusic, IconPlayerPlay, IconPlus, IconX } from "@tabler/icons-react"
 import { Dropzone, IconButton, PanelSection } from "../../../shared/ui"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
-import { useProject } from "../../../shared/store/useProject"
 import { acceptsFile } from "../../../shared/lib/acceptsFile"
 import { formatTime } from "../../../shared/lib/formatTime"
-import { stripExt } from "../../../shared/lib/stripExt"
 import { cn } from "../../../shared/lib/cn"
 
 const ACCEPT = "audio/*"
@@ -136,8 +134,6 @@ export function TracksSection() {
     if (!files.length) return
     const ids = files.map(() => crypto.randomUUID())
     enqueue({ type: "add", files, ids })
-    const project = useProject.getState()
-    if (!project.name.trim()) project.setName(stripExt(files[0].name))
   }
 
   const onInput = (picked: FileList | null) => {
