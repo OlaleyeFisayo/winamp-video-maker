@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { IconPhoto, IconX } from "@tabler/icons-react"
-import { Dropzone, IconButton, PanelSection, Segmented } from "../../../shared/ui"
+import { ColorPicker, Dropzone, IconButton, PanelSection, Segmented } from "../../../shared/ui"
 import { useCanvas, type BackgroundMode, type Fit } from "../../../shared/store/useCanvas"
 
 const MODES = [
@@ -33,6 +33,10 @@ function HexField({ value, onCommit }: { value: string; onCommit: (hex: string) 
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur()
+        if (e.key === "Escape") {
+          setRaw(value)
+          e.currentTarget.blur()
+        }
       }}
       className="h-9 flex-1 rounded-sm border border-rule bg-graphite px-3 font-mono text-[13px] uppercase leading-[1.3] text-paper transition-colors duration-100 hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
     />
@@ -54,13 +58,7 @@ export function BackgroundSection() {
 
       {mode === "color" && (
         <div className="flex items-center gap-2">
-          <input
-            type="color"
-            aria-label="Background colour"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="size-9 shrink-0 cursor-pointer appearance-none rounded-sm border border-rule bg-transparent p-0 transition-colors duration-100 hover:border-ash focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 [&::-moz-color-swatch]:border-0 [&::-webkit-color-swatch-wrapper]:p-1 [&::-webkit-color-swatch]:rounded-xs [&::-webkit-color-swatch]:border-0"
-          />
+          <ColorPicker aria-label="Background colour" value={color} onChange={setColor} />
           <HexField key={color} value={color} onCommit={setColor} />
         </div>
       )}
