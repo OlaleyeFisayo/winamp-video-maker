@@ -12,7 +12,7 @@ import { findTemplate, useSavedSkins } from "../../../shared/store/useSavedSkins
 import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { putFile } from "../../../shared/lib/sessionFiles"
-import { clearPlaylist, getCurrentIndex, getElapsed, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
+import { clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { useExport } from "../../../shared/store/useExport"
@@ -126,10 +126,21 @@ export function Editor() {
     if (first) void prefetchSkins()
   }, [templateId, savedUrl])
 
+  // the stage node survives unmount, so each mounted editor re-parents it into its own layout
+  useEffect(() => {
+    if (!supported || !stage.current) return
+    stage.current.appendChild(getStage())
+  }, [])
+
+  // React does not own the stage node, so zoom is applied directly
+  useEffect(() => {
+    if (supported) getStage().style.zoom = String(zoom)
+  }, [zoom])
+
   useEffect(() => {
     if (!supported || !stage.current) return
     const webamp = getWebamp()
-    void renderOnce(stage.current).then(() => {
+    void renderOnce().then(() => {
       // one cursor for the whole editor: borrow the skin's main-window cursor once the skin has loaded
       const main = document.querySelector("#webamp #main-window")
       const cursor = main ? getComputedStyle(main).cursor : ""
@@ -309,7 +320,8 @@ export function Editor() {
               preview && "pointer-events-none",
             )}
           >
-            <div ref={stage} className="relative h-87 w-68.75" style={{ zoom }} />
+            {/* the persistent webamp node is re-parented into here on mount */}
+            <div ref={stage} />
           </div>
         </div>
       </div>

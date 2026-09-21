@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Analytics } from '@vercel/analytics/react'
 import './shared/index.css'
 import App from './App.tsx'
 
@@ -22,6 +23,8 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={client}>
       <BrowserRouter>
         <App />
+        {/* inside the router so route changes report as separate pages */}
+        <Analytics />
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,
