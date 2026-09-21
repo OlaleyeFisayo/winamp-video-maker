@@ -23,7 +23,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 3. Name your video in the header, select **Export**, and choose tracks, resolution, and frame rate.
 4. Wait for the download. You can cancel from the progress notice.
 
-Shortcuts: **K** play/pause, **J** previous track, **L** next track, **F** fullscreen. The help button shows the shortcuts and app credits.
+Shortcuts: **K** play/pause, **J** previous track, **L** next track, **F** fullscreen, and **Alt+↑/↓** to move a track up or down while its row is focused. The keyboard button shows the shortcuts; the help button shows the app credits.
 
 Export requires browser support for WebCodecs; transparent WebM additionally requires VP9 alpha and Opus encoding. Available codecs and resolutions depend on your browser and device.
 

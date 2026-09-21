@@ -1,7 +1,6 @@
 import { Dialog } from "../../../shared/ui"
 import { useHelp } from "../../../shared/store/useHelp"
 import { LINKS, linkClass } from "../../../shared/lib/links"
-import { SHORTCUTS } from "../../editor/lib/useShortcuts"
 
 export function HelpDialog() {
   const { open, setOpen } = useHelp()
@@ -29,22 +28,6 @@ export function HelpDialog() {
           </a>
         ))}
       </div>
-      {/* shortcuts need a keyboard, so they are desktop-only */}
-      <section className="hidden flex-col gap-2 md:flex">
-        <h3 className="text-[15px] leading-normal text-paper">Keyboard shortcuts</h3>
-        <dl className="flex flex-col gap-3">
-          {SHORTCUTS.map((s) => (
-            <div key={s.key} className="flex items-center justify-between">
-              <dt className="text-[15px] leading-[1.3] text-paper">{s.label}</dt>
-              <dd>
-                <kbd className="inline-flex size-7 items-center justify-center rounded-sm border border-rule bg-graphite font-mono text-[13px] text-paper">
-                  {s.key}
-                </kbd>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
     </Dialog>
   )
 }

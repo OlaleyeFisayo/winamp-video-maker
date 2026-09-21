@@ -8,6 +8,7 @@ import { FrameSection } from "./features/frame"
 import { BackgroundSection, SizeSection } from "./features/canvas"
 import { ExportDialog } from "./features/export"
 import { HelpDialog } from "./features/help"
+import { ShortcutsDialog } from "./features/shortcuts"
 import { Button, Panel, Toaster } from "./shared/ui"
 import { cn } from "./shared/lib/cn"
 import { hydrateSavedSkins } from "./shared/store/useSavedSkins"
@@ -97,6 +98,7 @@ function App() {
       </Routes>
       <ExportDialog />
       <HelpDialog />
+      <ShortcutsDialog />
       <Toaster />
     </>
   )
