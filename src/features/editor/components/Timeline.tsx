@@ -1,7 +1,9 @@
-import { useRef, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from "react"
 import { IconScissors } from "@tabler/icons-react"
 import { Button } from "../../../shared/ui"
 import { effectiveDuration, playheadTime, useAudio } from "../../../shared/store/useAudio"
+import { useTheme } from "../../../shared/store/useTheme"
+import { useWaveforms } from "../../../shared/store/useWaveforms"
 import { formatTime } from "../../../shared/lib/formatTime"
 import { useElementSize } from "../../../shared/lib/useElementSize"
 import { cn } from "../../../shared/lib/cn"
@@ -15,6 +17,57 @@ const pickStep = (total: number, width: number) =>
   STEPS.find((s) => (s / total) * width >= MIN_LABEL_GAP) ?? STEPS[STEPS.length - 1]
 
 const label = (t: number) => (t < 60 ? `${t}s` : formatTime(t))
+
+/** How loud the waveform reads against the block; the active track's is stronger. */
+const WAVE_ALPHA = { active: 0.38, idle: 0.18 }
+
+type WaveProps = { url: string; active: boolean }
+
+/**
+ * The track's peaks, mirrored about the centre line and drawn behind its label. Canvas rather
+ * than one element per bucket: 400 buckets a track adds up, and this redraws cheaply.
+ */
+function Waveform({ url, active }: WaveProps) {
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const box = useRef<HTMLDivElement>(null)
+  const peaks = useWaveforms((s) => s.peaks[url])
+  const { width, height } = useElementSize(box, true)
+  // the contrast token flips between black and white, so the colour is read at paint time
+  const theme = useTheme((s) => s.theme)
+
+  useEffect(() => {
+    const el = canvas.current
+    if (!el || !peaks || width < 1 || height < 1) return
+    const ctx = el.getContext("2d")
+    if (!ctx) return
+
+    const dpr = window.devicePixelRatio || 1
+    el.width = Math.round(width * dpr)
+    el.height = Math.round(height * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    ctx.clearRect(0, 0, width, height)
+
+    const colour = getComputedStyle(el).getPropertyValue("--contrast").trim() || "#FFFFFF"
+    ctx.fillStyle = colour
+    ctx.globalAlpha = active ? WAVE_ALPHA.active : WAVE_ALPHA.idle
+
+    // one bar per pixel column, so a narrow block samples the peaks rather than cramming them
+    const mid = height / 2
+    const columns = Math.max(1, Math.floor(width))
+    for (let x = 0; x < columns; x++) {
+      const peak = peaks[Math.min(peaks.length - 1, Math.floor((x / columns) * peaks.length))]
+      // a floor of half a pixel keeps silence as a centre line instead of a gap
+      const half = Math.max(0.5, peak * mid)
+      ctx.fillRect(x, mid - half, 1, half * 2)
+    }
+  }, [peaks, width, height, active, theme])
+
+  return (
+    <div ref={box} aria-hidden className="pointer-events-none absolute inset-0">
+      <canvas ref={canvas} className="size-full" />
+    </div>
+  )
+}
 
 export function Timeline() {
   const { tracks, current, time, enqueue } = useAudio()
@@ -103,11 +156,17 @@ export function Timeline() {
                 i === current && "outline-1 -outline-offset-1 outline-contrast",
               )}
             >
-              <span className="min-w-0 flex-1 truncate text-[13px] leading-none text-paper">{t.title}</span>
+              {/* the canvas sizes from its block, so a wider block draws more detail */}
+              <Waveform url={t.url} active={i === current} />
+              <span className="relative min-w-0 flex-1 truncate text-[13px] leading-none text-paper">
+                {t.title}
+              </span>
               {t.trim != null && (
-                <IconScissors size={12} stroke={1.5} aria-label="Cut" className="shrink-0 text-ash" />
+                <IconScissors size={12} stroke={1.5} aria-label="Cut" className="relative shrink-0 text-ash" />
               )}
-              <span className="shrink-0 font-mono text-[11px] leading-none text-ash">{formatTime(durations[i])}</span>
+              <span className="relative shrink-0 font-mono text-[11px] leading-none text-ash">
+                {formatTime(durations[i])}
+              </span>
             </div>
           ))}
         </div>

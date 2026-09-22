@@ -18,6 +18,7 @@ import { useMediaSession } from "../lib/useMediaSession"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { useExport } from "../../../shared/store/useExport"
 import { useReset } from "../../../shared/store/useReset"
+import { hydrateWaveforms } from "../../../shared/store/useWaveforms"
 import { resetApp } from "../../../shared/lib/resetApp"
 import { useToast } from "../../../shared/store/useToast"
 import { Timeline } from "./Timeline"
@@ -114,6 +115,12 @@ export function Editor() {
 
   useShortcuts()
   useMediaSession()
+
+  // the timeline draws each track's waveform; decoding happens here, off the render path
+  const trackUrls = useAudio((s) => s.tracks.map((t) => t.url).join("\n"))
+  useEffect(() => {
+    void hydrateWaveforms()
+  }, [trackUrls])
 
   // likewise the reset: emptying the playlist needs the Webamp the editor owns
   useEffect(() => {
