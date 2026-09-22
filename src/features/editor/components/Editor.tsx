@@ -14,6 +14,7 @@ import { stripExt } from "../../../shared/lib/stripExt"
 import { putFile } from "../../../shared/lib/sessionFiles"
 import { clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
+import { useMediaSession } from "../lib/useMediaSession"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { useExport } from "../../../shared/store/useExport"
 import { useReset } from "../../../shared/store/useReset"
@@ -93,6 +94,7 @@ export function Editor() {
   const pendingSeek = useRef<{ index: number; offset: number; pause: boolean; loaded: boolean } | null>(null)
 
   useShortcuts()
+  useMediaSession()
 
   // likewise the reset: emptying the playlist needs the Webamp the editor owns
   useEffect(() => {
