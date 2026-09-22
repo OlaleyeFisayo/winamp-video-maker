@@ -71,7 +71,17 @@ export const runExport = async (req: ExportRequest) => {
     const decoded = new Map<number, DecodedTrack>()
     for (const i of needed) {
       if (cancelled) throw new Error("cancelled")
-      decoded.set(i, await decodeTrack(audio.tracks[i].url, audio.tracks[i].title))
+      const track = await decodeTrack(audio.tracks[i].url, audio.tracks[i].title)
+      // A cut is a trim point, not a rewrite, so the file still holds the audio after it.
+      // Truncating here is what keeps the export honest: everything downstream — frame count,
+      // the playlist window's durations, the muxed audio — reads these two fields.
+      const trim = audio.tracks[i].trim
+      if (trim != null && trim < track.duration) {
+        const samples = Math.max(1, Math.floor(trim * track.sampleRate))
+        track.channels = track.channels.map((c) => c.subarray(0, samples))
+        track.duration = trim
+      }
+      decoded.set(i, track)
     }
 
     const canvas = useCanvas.getState()

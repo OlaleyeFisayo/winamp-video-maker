@@ -1,4 +1,5 @@
 import type Webamp from "webamp"
+import { useAudio } from "../../../shared/store/useAudio"
 import { IMAGE_KEY, restoreBackground } from "../../../shared/store/useCanvas"
 import { clearExcept, deleteFile, getFile, listKeys } from "../../../shared/lib/sessionFiles"
 import { buildManifest, readManifest, writeManifest, type ManifestEntry } from "../../../shared/lib/trackManifest"
@@ -14,12 +15,15 @@ let ready = false
 /** Called after Webamp finishes a mutation, including an append or a remove/rebuild. */
 export const saveSession = (webamp: Webamp, current: number | null) => {
   if (!ready) return
+  const trims = useAudio.getState().trims
   const rows = webamp.getPlaylistTracks().map((t) => ({
     url: t.url,
     title: t.title ?? t.defaultName ?? "Untitled",
+    trim: trims[t.url] ?? null,
   }))
   writeManifest(buildManifest(rows, fileIds, current === null ? undefined : rows[current]?.url))
   const live = new Set(rows.map((t) => t.url))
+  useAudio.getState().pruneTrims([...live])
   for (const [url, id] of fileIds) {
     if (!live.has(url)) {
       fileIds.delete(url)
@@ -67,6 +71,12 @@ const restoreOnce = async (webamp: Webamp) => {
   if (found.length) {
     webamp.appendTracks(found.map((t) => ({ blob: t.blob, metaData: { title: t.title, artist: "" } })))
     trackAppended(webamp, found.map((t) => t.id))
+    // the trim is keyed by the blob URL webamp just minted, so it is re-applied after the append
+    const appended = webamp.getPlaylistTracks()
+    found.forEach((t, i) => {
+      const url = appended[i]?.url
+      if (url && typeof t.trim === "number") useAudio.getState().setTrim(url, t.trim)
+    })
     const selected = found.findIndex((t) => t.selected === true)
     if (selected !== -1) webamp.setCurrentTrack(webamp.getPlaylistTracks()[selected].id)
   }

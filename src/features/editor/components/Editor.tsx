@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { IconMinimize } from "@tabler/icons-react"
 import { IconButton } from "../../../shared/ui"
 import Webamp from "webamp"
-import { useAudio, type Track } from "../../../shared/store/useAudio"
+import { effectiveDuration, useAudio, type Track } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { useElementSize } from "../../../shared/lib/useElementSize"
@@ -12,7 +12,7 @@ import { findTemplate, useSavedSkins } from "../../../shared/store/useSavedSkins
 import { cn } from "../../../shared/lib/cn"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { putFile } from "../../../shared/lib/sessionFiles"
-import { clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
+import { bufferTrack, clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
 import { useMediaSession } from "../lib/useMediaSession"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
@@ -44,13 +44,16 @@ const toUrlTrack = (t: Track) => ({
   metaData: { title: t.title, artist: "" },
 })
 
-const readPlaylist = (webamp: Webamp): Track[] =>
-  webamp.getPlaylistTracks().map((t) => ({
+const readPlaylist = (webamp: Webamp): Track[] => {
+  const trims = useAudio.getState().trims
+  return webamp.getPlaylistTracks().map((t) => ({
     id: t.id,
     title: t.title ?? t.defaultName ?? "Untitled",
     url: t.url,
     duration: t.duration,
+    trim: trims[t.url] ?? null,
   }))
+}
 
 /**
  * Replaces the playlist with `next`, without setTracksToPlay so nothing auto-plays.
@@ -71,9 +74,25 @@ const rebuild = (webamp: Webamp, next: Track[], keep: number | null) => {
   }
 }
 
+/** A cut this close to the start would leave nothing, so it is ignored. */
+const MIN_TRIM = 0.1
+
+/** Global timeline time -> which track it lands in, and how far into that track. */
+const locate = (tracks: Track[], at: number) => {
+  let index = 0
+  let offset = Math.max(0, at)
+  while (index < tracks.length - 1 && offset >= effectiveDuration(tracks[index])) {
+    offset -= effectiveDuration(tracks[index])
+    index++
+  }
+  return { index, offset }
+}
+
 const same = (a: Track[], b: Track[]) =>
   a.length === b.length &&
-  a.every((t, i) => t.id === b[i].id && t.title === b[i].title && t.duration === b[i].duration)
+  a.every(
+    (t, i) => t.id === b[i].id && t.title === b[i].title && t.duration === b[i].duration && t.trim === b[i].trim,
+  )
 
 export function Editor() {
   const stage = useRef<HTMLDivElement>(null)
@@ -196,6 +215,15 @@ export function Editor() {
       const time = getElapsed()
       if (time !== state.time) store.setTime(time)
       const index = getCurrentIndex()
+      // Webamp plays the whole file, so a cut is enforced here: this already ticks through
+      // playback, which saves running a timer of our own alongside it.
+      if (index !== null && status === "PLAYING") {
+        const trim = next[index]?.trim
+        if (trim != null && time >= trim) {
+          if (index < next.length - 1) webamp.nextTrack()
+          else webamp.stop()
+        }
+      }
       if (tracksChanged || index !== state.current) {
         // append registers file IDs after dispatch; removal briefly empties the playlist.
         // Save the completed mutation, never one of those intermediate states.
@@ -255,24 +283,37 @@ export function Editor() {
           if (current === null) webamp.setCurrentTrack(tracks[0].id)
           webamp.play()
         }
-      } else if (c.type === "seek") {
-        // global timeline time -> track index + offset
-        let index = 0
-        let offset = Math.max(0, c.time)
-        while (index < tracks.length - 1 && offset >= (tracks[index].duration ?? 0)) {
-          offset -= tracks[index].duration ?? 0
-          index++
-        }
+      } else if (c.type === "cut") {
+        const { index, offset } = locate(tracks, c.at)
         const target = tracks[index]
         if (!target) continue
-        const status = webamp.getMediaStatus()
-        if (index !== current) {
-          // the new track has to load before it can seek; onTrackDidChange finishes the job
-          pendingSeek.current = { index, offset, pause: status === "PAUSED", loaded: false }
+        const end = effectiveDuration(target)
+        // nothing to keep, or nothing to remove
+        if (offset < MIN_TRIM || offset >= end) continue
+        useAudio.getState().setTrim(target.url, offset)
+        // never leave the playhead inside audio that no longer exists
+        if (index === current && getElapsed() > offset) webamp.seekToTime(Math.max(0, offset - 0.05))
+        queueMicrotask(() => saveSession(webamp, getCurrentIndex()))
+      } else if (c.type === "seek") {
+        const { index, offset } = locate(tracks, c.time)
+        const target = tracks[index]
+        if (!target) continue
+        // scrubbing moves the playhead, it does not start the track: whatever was or was not
+        // playing before the seek is what is playing after it
+        const wasPlaying = webamp.getMediaStatus() === "PLAYING"
+        if (index !== current && !wasPlaying) {
+          // BUFFER_TRACK selects the track without autoplaying it, so a paused scrub stays
+          // paused: no playback to undo afterwards, and the seek lands straight away because
+          // the duration comes from the track metadata rather than the loaded media.
+          bufferTrack(target.id)
+          webamp.seekToTime(offset)
+        } else if (index !== current) {
+          // playing, so the track is meant to keep going: load it the normal way and let
+          // pendingSeek place the playhead once onTrackDidChange says it is ready
+          pendingSeek.current = { index, offset, pause: false, loaded: false }
           webamp.setCurrentTrack(target.id)
           webamp.play()
         } else {
-          if (status === "STOPPED") webamp.play()
           webamp.seekToTime(offset)
         }
       } else if (c.type === "next") {

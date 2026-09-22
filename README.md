@@ -10,6 +10,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 
 - Play your audio through classic Winamp skins, including Sony, Windows XP, Windows 98, and Netscape.
 - Add multiple tracks, rename them, drag them into the order you want, and scrub through your playlist on a timeline.
+- Cut a track at the playhead to drop everything after it. Cuts are trim points, so the original audio is never overwritten.
 - Choose portrait, landscape, square, or custom frames and adjust the player size.
 - Use a colour, image, or transparent background and preview fullscreen.
 - Export your playlist as one video, each track separately, or selected tracks at 30/60 fps and 720p through 4K.
@@ -26,7 +27,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 3. Name your video in the header, select **Export**, and choose tracks, resolution, and frame rate.
 4. Wait for the download. You can cancel from the progress notice.
 
-Shortcuts: **K** play/pause, **J** previous track, **L** next track, **F** fullscreen, **N** start over, and **Alt+↑/↓** to move a track up or down while its row is focused. The keyboard button shows the shortcuts; the help button shows the app credits.
+Shortcuts: **K** or **Space** play/pause, **J** previous track, **L** next track, **F** fullscreen, **N** start over, **X** cut at the playhead, and **Alt+↑/↓** to move a track up or down while its row is focused. The keyboard button shows the shortcuts; the help button shows the app credits.
 
 Export requires browser support for WebCodecs; transparent WebM additionally requires VP9 alpha and Opus encoding. Available codecs and resolutions depend on your browser and device.
 

@@ -59,6 +59,13 @@ export const snapshotSkinState = () => {
 /** Seconds elapsed in the current track. */
 export const getElapsed = () => getState?.().media?.timeElapsed ?? 0
 
+/**
+ * Selects a track without starting it: webamp's own playTrack picks this over PLAY_TRACK when
+ * the player is stopped, because PLAY_TRACK loads the url with autoplay on. Seeking works right
+ * after, since the duration comes from the track metadata rather than the loaded media.
+ */
+export const bufferTrack = (id: number) => dispatch?.({ type: "BUFFER_TRACK", id })
+
 /** Index of the current track in playlist order, kept through pause and stop; null when none. */
 export const getCurrentIndex = () => {
   const pl = getState?.().playlist

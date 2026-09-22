@@ -1,16 +1,44 @@
 import { useEffect } from "react"
-import { useAudio } from "../../../shared/store/useAudio"
+import { playheadTime, useAudio } from "../../../shared/store/useAudio"
 import { usePreview } from "../../../shared/store/usePreview"
 import { useReset } from "../../../shared/store/useReset"
 
-/** The action each key runs. The shortcuts dialog renders this same table. */
-export const SHORTCUTS: { key: string; label: string; run: () => void }[] = [
-  { key: "K", label: "Play or pause", run: () => useAudio.getState().enqueue({ type: "toggle" }) },
+/**
+ * The action each key runs. The shortcuts dialog renders this same table, showing `display`
+ * in place of the raw key where that reads better.
+ */
+export const SHORTCUTS: {
+  key: string
+  label: string
+  /** Shown instead of `key` when the key alone would not read clearly. */
+  display?: string
+  /** Bound, but left out of the dialog because another row already covers it. */
+  hidden?: boolean
+  run: () => void
+}[] = [
+  { key: "K", label: "Play or pause", display: "K or Space", run: () => useAudio.getState().enqueue({ type: "toggle" }) },
+  // the same action on the space bar. e.key for it is " ", which survives toUpperCase unchanged;
+  // hidden from the dialog because the row above already names both keys
+  {
+    key: " ",
+    label: "Play or pause",
+    hidden: true,
+    run: () => useAudio.getState().enqueue({ type: "toggle" }),
+  },
   { key: "J", label: "Previous track", run: () => useAudio.getState().enqueue({ type: "previous" }) },
   { key: "L", label: "Next track", run: () => useAudio.getState().enqueue({ type: "next" }) },
   { key: "F", label: "Fullscreen preview", run: () => usePreview.getState().toggle() },
   // opens the confirmation, never resets outright: a stray keypress must not cost a workspace
   { key: "N", label: "Start over", run: () => useReset.getState().setOpen(true) },
+  // works while playing and while dragging the thumb: both keep the store's time current
+  {
+    key: "X",
+    label: "Cut at the playhead",
+    run: () => {
+      const at = playheadTime(useAudio.getState())
+      if (at !== null) useAudio.getState().enqueue({ type: "cut", at })
+    },
+  },
 ]
 
 /**
@@ -34,6 +62,10 @@ export const useShortcuts = () => {
       const match = SHORTCUTS.find((s) => s.key === e.key.toUpperCase())
       if (!match) return
       e.preventDefault()
+      // space would otherwise re-fire whatever button was last clicked, on top of the shortcut
+      if (e.key === " " && document.activeElement instanceof HTMLButtonElement) {
+        document.activeElement.blur()
+      }
       match.run()
     }
     window.addEventListener("keydown", onKeyDown)

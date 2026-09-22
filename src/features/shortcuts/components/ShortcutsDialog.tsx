@@ -11,11 +11,11 @@ export function ShortcutsDialog() {
   return (
     <Dialog open={open} onClose={() => setOpen(false)} title="Keyboard shortcuts">
       <dl className="flex flex-col gap-3">
-        {SHORTCUTS.map((s) => (
+        {SHORTCUTS.filter((s) => !s.hidden).map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-4">
             <dt className="text-[15px] leading-[1.3] text-paper">{s.label}</dt>
             <dd>
-              <kbd className={key}>{s.key}</kbd>
+              <kbd className={key}>{s.display ?? s.key}</kbd>
             </dd>
           </div>
         ))}

@@ -6,10 +6,10 @@
 
 import { key } from "./storageKeys"
 
-export type ManifestEntry = { id: string; title: string; selected?: boolean }
+export type ManifestEntry = { id: string; title: string; selected?: boolean; trim?: number }
 
 /** A playlist row, narrowed to what the manifest needs. */
-type Row = { url: string; title: string }
+type Row = { url: string; title: string; trim?: number | null }
 
 export const MANIFEST_KEY = key("playlist")
 
@@ -22,7 +22,13 @@ export const buildManifest = (rows: Row[], ids: Map<string, string>, selectedUrl
   const out: ManifestEntry[] = []
   for (const row of rows) {
     const id = ids.get(row.url)
-    if (id) out.push({ id, title: row.title, ...(row.url === selectedUrl ? { selected: true } : {}) })
+    if (id)
+      out.push({
+        id,
+        title: row.title,
+        ...(row.url === selectedUrl ? { selected: true } : {}),
+        ...(typeof row.trim === "number" ? { trim: row.trim } : {}),
+      })
   }
   return out
 }
@@ -33,10 +39,15 @@ export const readManifest = (): ManifestEntry[] => {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (e): e is ManifestEntry =>
-        !!e && typeof (e as ManifestEntry).id === "string" && typeof (e as ManifestEntry).title === "string",
-    )
+    return parsed
+      .filter(
+        (e): e is ManifestEntry =>
+          !!e && typeof (e as ManifestEntry).id === "string" && typeof (e as ManifestEntry).title === "string",
+      )
+      .map(({ trim, ...rest }) =>
+        // a trim from a tampered or older manifest must not poison the timeline arithmetic
+        typeof trim === "number" && Number.isFinite(trim) && trim > 0 ? { ...rest, trim } : rest,
+      )
   } catch {
     return []
   }
