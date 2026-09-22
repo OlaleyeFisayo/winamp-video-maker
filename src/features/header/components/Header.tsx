@@ -1,10 +1,11 @@
-import { IconDownload, IconHelp, IconKeyboard, IconMoon, IconSun } from "@tabler/icons-react"
+import { IconDownload, IconHelp, IconKeyboard, IconMoon, IconRefresh, IconSun } from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
 import { LINKS, linkClass } from "../../../shared/lib/links"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useExport } from "../../../shared/store/useExport"
 import { useHelp } from "../../../shared/store/useHelp"
 import { useShortcutsDialog } from "../../../shared/store/useShortcutsDialog"
+import { useReset } from "../../../shared/store/useReset"
 import { DEFAULT_NAME, useProject } from "../../../shared/store/useProject"
 import { useTheme } from "../../../shared/store/useTheme"
 
@@ -21,6 +22,7 @@ export function Header() {
   const openExport = useExport((s) => s.setOpen)
   const openHelp = useHelp((s) => s.setOpen)
   const openShortcuts = useShortcutsDialog((s) => s.setOpen)
+  const openReset = useReset((s) => s.setOpen)
   const ThemeIcon = theme === "dark" ? IconSun : IconMoon
   // one string for the tooltip and the accessible name, so they cannot drift apart
   const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
@@ -58,6 +60,9 @@ export function Header() {
         ))}
       </div>
       <div className="flex shrink-0 items-center gap-1 md:gap-3">
+        <IconButton aria-label="Start over" title="Start over" onClick={() => openReset(true)}>
+          <IconRefresh size={16} stroke={1.5} aria-hidden />
+        </IconButton>
         {/* shortcuts need a keyboard, so the button stays off touch layouts. The wrapper does the
             hiding: IconButton's own inline-flex would otherwise win over a `hidden` passed to it */}
         <span className="hidden md:contents">

@@ -8,6 +8,7 @@ import { FrameSection } from "./features/frame"
 import { BackgroundSection, SizeSection } from "./features/canvas"
 import { ExportDialog } from "./features/export"
 import { HelpDialog } from "./features/help"
+import { ResetDialog } from "./features/reset"
 import { ShortcutsDialog } from "./features/shortcuts"
 import { Button, Panel, Toaster } from "./shared/ui"
 import { cn } from "./shared/lib/cn"
@@ -99,6 +100,7 @@ function App() {
       <ExportDialog />
       <HelpDialog />
       <ShortcutsDialog />
+      <ResetDialog />
       <Toaster />
     </>
   )

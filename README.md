@@ -16,6 +16,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 - Show the full tracklist in the player on per-track exports, so a single-track video still shows the rest of the playlist.
 - Download MP4 for colour/image backgrounds or transparent WebM on supported browsers. Rendering happens locally in browser workers.
 - Restore your saved tracks and editor settings after a reload; switch between dark and light themes.
+- Start over at any time to clear the current video: tracks, size, background and name. Your saved skins and chosen template stay.
 
 ## Make a video
 
@@ -24,7 +25,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 3. Name your video in the header, select **Export**, and choose tracks, resolution, and frame rate.
 4. Wait for the download. You can cancel from the progress notice.
 
-Shortcuts: **K** play/pause, **J** previous track, **L** next track, **F** fullscreen, and **Alt+↑/↓** to move a track up or down while its row is focused. The keyboard button shows the shortcuts; the help button shows the app credits.
+Shortcuts: **K** play/pause, **J** previous track, **L** next track, **F** fullscreen, **N** start over, and **Alt+↑/↓** to move a track up or down while its row is focused. The keyboard button shows the shortcuts; the help button shows the app credits.
 
 Export requires browser support for WebCodecs; transparent WebM additionally requires VP9 alpha and Opus encoding. Available codecs and resolutions depend on your browser and device.
 

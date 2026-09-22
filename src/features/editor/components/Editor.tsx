@@ -16,6 +16,8 @@ import { clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSk
 import { useShortcuts } from "../lib/useShortcuts"
 import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { useExport } from "../../../shared/store/useExport"
+import { useReset } from "../../../shared/store/useReset"
+import { resetApp } from "../../../shared/lib/resetApp"
 import { useToast } from "../../../shared/store/useToast"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
@@ -91,6 +93,18 @@ export function Editor() {
   const pendingSeek = useRef<{ index: number; offset: number; pause: boolean; loaded: boolean } | null>(null)
 
   useShortcuts()
+
+  // likewise the reset: emptying the playlist needs the Webamp the editor owns
+  useEffect(() => {
+    useReset.getState().setRunner(async () => {
+      await resetApp(() => {
+        if (!supported) return
+        getWebamp().stop()
+        clearPlaylist()
+      })
+    })
+    return () => useReset.getState().setRunner(null)
+  }, [])
 
   // the editor owns Webamp, so it supplies the export runner the dialog calls
   useEffect(() => {
