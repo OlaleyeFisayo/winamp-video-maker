@@ -4,16 +4,18 @@ import { useAudio } from "../store/useAudio"
 import { useCanvas } from "../store/useCanvas"
 import { useFrame } from "../store/useFrame"
 import { useProject } from "../store/useProject"
+import { useTemplate } from "../store/useTemplate"
+import { DEFAULT_TEMPLATE } from "./templates"
 
 /**
- * Not the project's to reset: the theme, the skins the user collected, the skin they are working
- * in, and how they like to export. Starting a new video should not undo any of that.
+ * Not the project's to reset: the theme, the skins the user collected, and how they like to
+ * export. Starting a new video should not undo any of that.
  */
-const KEEP = [key("theme"), key("template"), key("saved-skins"), key("export")]
+const KEEP = [key("theme"), key("saved-skins"), key("export")]
 
 /**
- * Clears the current video — tracks, frame, background and name — and leaves the user's setup
- * alone. Done in place rather than by reloading, so the page the user is looking at is the one
+ * Clears the current video — tracks, skin, frame, background and name — and leaves the user's
+ * setup alone. Done in place rather than by reloading, so the page the user is looking at is the one
  * that resets. Order matters — see the comments below.
  *
  * The editor owns Webamp, so it passes in how to empty the playlist rather than this module
@@ -35,6 +37,7 @@ export const resetApp = async (clearPlaylist?: () => void) => {
   // 4. Back to the defaults each store declares.
   useAudio.setState({ tracks: [], current: null, status: "STOPPED", time: 0, commands: [] })
   useProject.setState({ name: "" })
+  useTemplate.setState({ id: DEFAULT_TEMPLATE.id })
   useCanvas.setState({ scale: 0.5, mode: "color", color: "#FFFFFF", image: null, imageName: null, fit: "cover" })
   useFrame.setState({ ratio: "16:9", custom: { width: 1920, height: 1080 } })
 

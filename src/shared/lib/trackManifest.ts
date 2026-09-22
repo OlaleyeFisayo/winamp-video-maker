@@ -18,10 +18,10 @@ export const MANIFEST_KEY = key("playlist")
  * stored file it was appended from; rows with no mapping are dropped, since without bytes
  * on disk there is nothing to restore.
  */
-export const buildManifest = (rows: Row[], ids: Map<string, string>, selectedUrl?: string): ManifestEntry[] => {
+export const buildManifest = (rows: Row[], ids: Map<string, { id: string }>, selectedUrl?: string): ManifestEntry[] => {
   const out: ManifestEntry[] = []
   for (const row of rows) {
-    const id = ids.get(row.url)
+    const id = ids.get(row.url)?.id
     if (id)
       out.push({
         id,

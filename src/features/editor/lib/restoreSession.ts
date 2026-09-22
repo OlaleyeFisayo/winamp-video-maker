@@ -9,8 +9,11 @@ import { buildManifest, readManifest, writeManifest, type ManifestEntry } from "
  * a track is appended, so this is filled in right after every append — on a restore and on a
  * fresh add alike. It is the join the manifest is rebuilt through.
  */
-const fileIds = new Map<string, string>()
+const fileIds = new Map<string, { id: string; blob: Blob }>()
 let ready = false
+
+/** The stored-file id and bytes behind a playlist row's blob URL, if it was appended through here. */
+export const fileFor = (url: string) => fileIds.get(url)
 
 /** Called after Webamp finishes a mutation, including an append or a remove/rebuild. */
 export const saveSession = (webamp: Webamp, current: number | null) => {
@@ -24,7 +27,7 @@ export const saveSession = (webamp: Webamp, current: number | null) => {
   writeManifest(buildManifest(rows, fileIds, current === null ? undefined : rows[current]?.url))
   const live = new Set(rows.map((t) => t.url))
   useAudio.getState().pruneTrims([...live])
-  for (const [url, id] of fileIds) {
+  for (const [url, { id }] of fileIds) {
     if (!live.has(url)) {
       fileIds.delete(url)
       void deleteFile(id)
@@ -32,12 +35,12 @@ export const saveSession = (webamp: Webamp, current: number | null) => {
   }
 }
 
-/** Records the ids for the rows Webamp just appended, in append order. */
-export const trackAppended = (webamp: Webamp, ids: string[]) => {
+/** Records the ids and bytes for the rows Webamp just appended, in append order. */
+export const trackAppended = (webamp: Webamp, ids: string[], blobs: Blob[]) => {
   const rows = webamp.getPlaylistTracks()
   const added = rows.slice(rows.length - ids.length)
   added.forEach((row, i) => {
-    if (row.url) fileIds.set(row.url, ids[i])
+    if (row.url) fileIds.set(row.url, { id: ids[i], blob: blobs[i] })
   })
 }
 
@@ -70,7 +73,7 @@ const restoreOnce = async (webamp: Webamp) => {
   }
   if (found.length) {
     webamp.appendTracks(found.map((t) => ({ blob: t.blob, metaData: { title: t.title, artist: "" } })))
-    trackAppended(webamp, found.map((t) => t.id))
+    trackAppended(webamp, found.map((t) => t.id), found.map((t) => t.blob))
     // the trim is keyed by the blob URL webamp just minted, so it is re-applied after the append
     const appended = webamp.getPlaylistTracks()
     found.forEach((t, i) => {

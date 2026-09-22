@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { playheadTime, useAudio } from "../../../shared/store/useAudio"
 import { usePreview } from "../../../shared/store/usePreview"
 import { useReset } from "../../../shared/store/useReset"
+import { redo, undo } from "./history"
 
 /**
  * The action each key runs. The shortcuts dialog renders this same table, showing `display`
@@ -10,12 +11,16 @@ import { useReset } from "../../../shared/store/useReset"
 export const SHORTCUTS: {
   key: string
   label: string
+  /** Needs Ctrl (or Cmd) held; without it the key is left alone. */
+  ctrl?: boolean
   /** Shown instead of `key` when the key alone would not read clearly. */
   display?: string
   /** Bound, but left out of the dialog because another row already covers it. */
   hidden?: boolean
   run: () => void
 }[] = [
+  { key: "Z", ctrl: true, label: "Undo", display: "Ctrl + Z", run: undo },
+  { key: "Y", ctrl: true, label: "Redo", display: "Ctrl + Y", run: redo },
   { key: "K", label: "Play or pause", display: "K or Space", run: () => useAudio.getState().enqueue({ type: "toggle" }) },
   // the same action on the space bar. e.key for it is " ", which survives toUpperCase unchanged;
   // hidden from the dialog because the row above already names both keys
@@ -58,8 +63,10 @@ const typing = (el: EventTarget | null) =>
 export const useShortcuts = () => {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return
-      const match = SHORTCUTS.find((s) => s.key === e.key.toUpperCase())
+      // typing keeps the browser's own Ctrl+Z inside the field
+      if (e.altKey || typing(e.target)) return
+      const mod = e.ctrlKey || e.metaKey
+      const match = SHORTCUTS.find((s) => s.key === e.key.toUpperCase() && !!s.ctrl === mod)
       if (!match) return
       e.preventDefault()
       // space would otherwise re-fire whatever button was last clicked, on top of the shortcut

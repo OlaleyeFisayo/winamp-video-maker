@@ -10,6 +10,7 @@ export function IconButton({ className, ...rest }: Props) {
       className={cn(
         "inline-flex size-9 items-center justify-center rounded-sm border border-transparent text-ash transition-colors duration-100 md:size-8",
         "hover:border-rule hover:text-paper",
+        "disabled:pointer-events-none disabled:opacity-40",
         "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
         className,
       )}

@@ -6,7 +6,7 @@ import {
   IconBrandX,
 } from "@tabler/icons-react"
 
-/** Shared by the header (from md up) and the help dialog (where the header hides them). */
+/** The makers' profiles, shown in the About dialog. */
 export const LINKS = [
   { label: "TikTok", href: "https://www.tiktok.com/@semyelite", Icon: IconBrandTiktok },
   { label: "Instagram", href: "https://www.instagram.com/omo.its.semy", Icon: IconBrandInstagram },

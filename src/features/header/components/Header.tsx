@@ -1,6 +1,15 @@
-import { IconDownload, IconHelp, IconKeyboard, IconMoon, IconRefresh, IconSun } from "@tabler/icons-react"
+import {
+  IconArrowBackUp,
+  IconArrowForwardUp,
+  IconDownload,
+  IconHelp,
+  IconKeyboard,
+  IconMoon,
+  IconRefresh,
+  IconSun,
+} from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
-import { LINKS, linkClass } from "../../../shared/lib/links"
+import { redo, undo, useHistory } from "../../editor/lib/history"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useExport } from "../../../shared/store/useExport"
 import { useHelp } from "../../../shared/store/useHelp"
@@ -23,6 +32,8 @@ export function Header() {
   const openHelp = useHelp((s) => s.setOpen)
   const openShortcuts = useShortcutsDialog((s) => s.setOpen)
   const openReset = useReset((s) => s.setOpen)
+  const canUndo = useHistory((s) => s.past.length > 0)
+  const canRedo = useHistory((s) => s.future.length > 0)
   const ThemeIcon = theme === "dark" ? IconSun : IconMoon
   // one string for the tooltip and the accessible name, so they cannot drift apart
   const themeLabel = theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
@@ -43,26 +54,18 @@ export function Header() {
           className="h-9 w-full min-w-0 rounded-sm border border-rule md:w-56 bg-graphite px-3 text-[15px] leading-[1.3] text-paper transition-colors duration-100 placeholder:text-ash hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
         />
       </div>
-      {/* the profiles carry these links too, so they are the first thing to go when narrow */}
-      <div className="hidden items-center gap-1 md:flex">
-        {LINKS.map(({ label, href, Icon }) => (
-          <a
-            key={label}
-            href={href}
-            target="_blank"
-            rel="noreferrer noopener"
-            aria-label={label}
-            title={label}
-            className={linkClass}
-          >
-            <Icon size={16} stroke={1.5} aria-hidden />
-          </a>
-        ))}
-      </div>
-      <div className="flex shrink-0 items-center gap-1 md:gap-3">
+      <div className="flex shrink-0 items-center gap-1">
+        <IconButton aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}>
+          <IconArrowBackUp size={16} stroke={1.5} aria-hidden />
+        </IconButton>
+        <IconButton aria-label="Redo" title="Redo (Ctrl+Y)" disabled={!canRedo} onClick={redo}>
+          <IconArrowForwardUp size={16} stroke={1.5} aria-hidden />
+        </IconButton>
         <IconButton aria-label="Start over" title="Start over" onClick={() => openReset(true)}>
           <IconRefresh size={16} stroke={1.5} aria-hidden />
         </IconButton>
+      </div>
+      <div className="flex shrink-0 items-center gap-1 md:gap-3">
         {/* shortcuts need a keyboard, so the button stays off touch layouts. The wrapper does the
             hiding: IconButton's own inline-flex would otherwise win over a `hidden` passed to it */}
         <span className="hidden md:contents">

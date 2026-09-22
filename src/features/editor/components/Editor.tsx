@@ -20,6 +20,7 @@ import { useExport } from "../../../shared/store/useExport"
 import { useReset } from "../../../shared/store/useReset"
 import { hydrateWaveforms } from "../../../shared/store/useWaveforms"
 import { resetApp } from "../../../shared/lib/resetApp"
+import { clearHistory, startHistory } from "../lib/history"
 import { useToast } from "../../../shared/store/useToast"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
@@ -130,9 +131,16 @@ export function Editor() {
         getWebamp().stop()
         clearPlaylist()
       })
+      // the dialog promises this cannot be undone, so the reset is the new baseline
+      clearHistory()
     })
     return () => useReset.getState().setRunner(null)
   }, [])
+
+  // undo history starts once the session is back, so the restore itself is not a step
+  useEffect(() => {
+    if (supported && sessionReady) startHistory()
+  }, [sessionReady])
 
   // the editor owns Webamp, so it supplies the export runner the dialog calls
   useEffect(() => {
@@ -274,7 +282,7 @@ export function Editor() {
         c.files.forEach((file, i) => void putFile(c.ids[i], file))
         // append only: adding never starts playback
         webamp.appendTracks(c.files.map(toBlobTrack))
-        trackAppended(webamp, c.ids)
+        trackAppended(webamp, c.ids, c.files)
       } else if (c.type === "remove") {
         rebuild(webamp, tracks.filter((_, i) => i !== c.index), current === c.index ? null : current)
       } else if (c.type === "move") {

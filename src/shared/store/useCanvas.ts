@@ -22,11 +22,13 @@ type Canvas = {
   /** Object URL of the background image, or null. */
   image: string | null
   imageName: string | null
+  /** The bytes behind `image`, so undo can bring a replaced image back. Not persisted. */
+  imageFile: Blob | null
   fit: Fit
   setScale: (scale: number) => void
   setMode: (mode: BackgroundMode) => void
   setColor: (hex: string) => void
-  setImage: (file: File | null) => void
+  setImage: (file: Blob | null, name?: string) => void
   setFit: (fit: Fit) => void
 }
 
@@ -38,22 +40,25 @@ export const useCanvas = create<Canvas>()(
       color: "#FFFFFF",
       image: null,
       imageName: null,
+      imageFile: null,
       fit: "cover",
       setScale: (scale) => set({ scale: Math.min(1, Math.max(0.1, scale)) }),
       setMode: (mode) => set({ mode }),
       setColor: (hex) => {
         if (HEX.test(hex)) set({ color: hex.toUpperCase() })
       },
-      setImage: (file) => {
+      setImage: (file, name) => {
         imageRevision++
         set((s) => {
+          if (file === s.imageFile) return s
           // the previous blob is ours to release; nothing else holds a reference
           if (s.image) URL.revokeObjectURL(s.image)
+          const imageName = name ?? (file as File | null)?.name ?? ""
           // keep the bytes too, so the image survives a reload
-          void (file ? putFile(IMAGE_KEY, file) : deleteFile(IMAGE_KEY))
+          void (file ? putFile(IMAGE_KEY, file, imageName) : deleteFile(IMAGE_KEY))
           return file
-            ? { image: URL.createObjectURL(file), imageName: file.name }
-            : { image: null, imageName: null }
+            ? { image: URL.createObjectURL(file), imageName, imageFile: file }
+            : { image: null, imageName: null, imageFile: null }
         })
       },
       setFit: (fit) => set({ fit }),
@@ -73,5 +78,5 @@ export const restoreBackground = async () => {
   const revision = imageRevision
   const stored = await getFile(IMAGE_KEY)
   if (!(stored?.blob instanceof Blob) || revision !== imageRevision || useCanvas.getState().image) return
-  useCanvas.setState({ image: URL.createObjectURL(stored.blob), imageName: stored.name })
+  useCanvas.setState({ image: URL.createObjectURL(stored.blob), imageName: stored.name, imageFile: stored.blob })
 }

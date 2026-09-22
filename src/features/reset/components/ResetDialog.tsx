@@ -34,8 +34,8 @@ export function ResetDialog() {
       }
     >
       <p className="text-[15px] leading-normal text-ash">
-        Clears your tracks, size, background and video name. Your saved skins and the skin you're
-        using stay. This can't be undone.
+        Clears your tracks, size, background and video name, and goes back to the default skin.
+        Your saved skins stay. This can't be undone.
       </p>
     </Dialog>
   )
