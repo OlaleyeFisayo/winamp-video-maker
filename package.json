@@ -3,7 +3,7 @@
   "description": "Turn audio into Winamp-style videos with classic skins, animated visualizers, custom backgrounds, and flexible export settings.",
   "author": "Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "preinstall": "node scripts/require-pnpm.mjs",
