@@ -26,4 +26,6 @@ const apply = (theme: Theme) => {
   document.documentElement.dataset.theme = theme
 }
 apply(useTheme.getState().theme)
-useTheme.subscribe((s) => apply(s.theme))
+useTheme.subscribe((s, p) => {
+  if (s.theme !== p.theme) apply(s.theme)
+})

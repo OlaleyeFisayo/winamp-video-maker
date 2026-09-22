@@ -113,9 +113,15 @@ const run = async (msg: StartMessage) => {
   const sampleRate = msg.tracks[0]?.sampleRate ?? 48000
   const skin = await loadSkin(msg.archive)
 
+  // the mono mix only feeds the visualiser; with it off (vis 2) the pass over every sample is skipped
+  const needMono = msg.skin.vis !== 2
   const tracks: Scene["tracks"] = msg.tracks.map((t) => {
-    const mono = new Float32Array(t.channels[0].length)
-    for (const ch of t.channels) for (let i = 0; i < mono.length; i++) mono[i] += ch[i] / t.channels.length
+    let mono = new Float32Array(0)
+    if (needMono) {
+      mono = new Float32Array(t.channels[0].length)
+      const gain = 1 / t.channels.length
+      for (const ch of t.channels) for (let i = 0; i < mono.length; i++) mono[i] += ch[i] * gain
+    }
     return { title: t.title, duration: t.duration, kbps: t.kbps, khz: t.sampleRate / 1000, channels: t.channels.length, mono, sampleRate: t.sampleRate }
   })
   // `tracks` alone drives length and timing below; `playlist` only changes what is drawn

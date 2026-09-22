@@ -6,9 +6,11 @@ export const useElementSize = (ref: RefObject<HTMLElement | null>, active = true
   useEffect(() => {
     const el = ref.current
     if (!active || !el) return
-    const ro = new ResizeObserver(([entry]) =>
-      setSize({ width: entry.contentRect.width, height: entry.contentRect.height }),
-    )
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      // the observer fires for any layout pass; only a real size change should re-render
+      setSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }))
+    })
     ro.observe(el)
     return () => ro.disconnect()
   }, [ref, active])

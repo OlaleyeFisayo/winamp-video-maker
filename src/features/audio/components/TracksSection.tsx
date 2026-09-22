@@ -119,7 +119,10 @@ function Row({ track: t, index: i, active, count, draggingRef }: RowProps) {
 }
 
 export function TracksSection() {
-  const { tracks, current, enqueue } = useAudio()
+  // narrow selectors: the store also carries the playhead, which ticks through playback
+  const tracks = useAudio((s) => s.tracks)
+  const current = useAudio((s) => s.current)
+  const enqueue = useAudio((s) => s.enqueue)
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLOListElement>(null)
   const dragging = useRef<number | null>(null)

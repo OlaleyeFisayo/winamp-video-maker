@@ -25,7 +25,8 @@ const exportHint = (canExport: boolean, name: string) => {
 }
 
 export function Header() {
-  const { name, setName } = useProject()
+  const name = useProject((s) => s.name)
+  const setName = useProject((s) => s.setName)
   const { theme, toggle } = useTheme()
   const canExport = useAudio((s) => s.tracks.length > 0)
   const openExport = useExport((s) => s.setOpen)

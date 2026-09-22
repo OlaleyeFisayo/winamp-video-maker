@@ -13,10 +13,13 @@ import { usePreview } from "../../../shared/store/usePreview"
 const square = "size-9 justify-center px-0!"
 
 export function Transport() {
-  const { tracks, status, enqueue } = useAudio()
-  const { active, toggle } = usePreview()
-  const many = tracks.length > 1
-  const playing = status === "PLAYING"
+  // primitives only: the store ticks with playback, and none of these change per tick
+  const any = useAudio((s) => s.tracks.length > 0)
+  const many = useAudio((s) => s.tracks.length > 1)
+  const playing = useAudio((s) => s.status === "PLAYING")
+  const enqueue = useAudio((s) => s.enqueue)
+  const active = usePreview((s) => s.active)
+  const toggle = usePreview((s) => s.toggle)
 
   return (
     <div className="flex h-12 items-center justify-between pt-4">
@@ -26,7 +29,7 @@ export function Transport() {
             <IconPlayerSkipBack size={16} stroke={1.5} aria-hidden />
           </Button>
         )}
-        {tracks.length > 0 && (
+        {any && (
           <Button aria-label={playing ? "Pause" : "Play"} className={square} onClick={() => enqueue({ type: "toggle" })}>
             {playing ? (
               <IconPlayerPause size={18} stroke={1.5} aria-hidden />

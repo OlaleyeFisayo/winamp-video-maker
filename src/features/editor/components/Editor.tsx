@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { IconMinimize } from "@tabler/icons-react"
 import { IconButton } from "../../../shared/ui"
 import Webamp from "webamp"
@@ -15,7 +15,7 @@ import { putFile } from "../../../shared/lib/sessionFiles"
 import { bufferTrack, clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
 import { useShortcuts } from "../lib/useShortcuts"
 import { useMediaSession } from "../lib/useMediaSession"
-import { restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
+import { fileFor, peaksKey, restoreSession, saveSession, trackAppended } from "../lib/restoreSession"
 import { useExport } from "../../../shared/store/useExport"
 import { useReset } from "../../../shared/store/useReset"
 import { hydrateWaveforms } from "../../../shared/store/useWaveforms"
@@ -46,16 +46,31 @@ const toUrlTrack = (t: Track) => ({
   metaData: { title: t.title, artist: "" },
 })
 
+type Row = ReturnType<Webamp["getPlaylistTracks"]>[number]
+
+const rowTitle = (t: Row) => t.title ?? t.defaultName ?? "Untitled"
+
 const readPlaylist = (webamp: Webamp): Track[] => {
   const trims = useAudio.getState().trims
   return webamp.getPlaylistTracks().map((t) => ({
     id: t.id,
-    title: t.title ?? t.defaultName ?? "Untitled",
+    title: rowTitle(t),
     url: t.url,
     duration: t.duration,
     trim: trims[t.url] ?? null,
   }))
 }
+
+/**
+ * Whether the mirror is stale, checked against Webamp's own rows before anything is allocated:
+ * the store change fires on every tick and marquee step, and the answer is almost always no.
+ */
+const mirrorStale = (rows: Row[], tracks: Track[], trims: Record<string, number>) =>
+  rows.length !== tracks.length ||
+  rows.some((r, i) => {
+    const t = tracks[i]
+    return r.id !== t.id || r.duration !== t.duration || rowTitle(r) !== t.title || (trims[r.url] ?? null) !== t.trim
+  })
 
 /**
  * Replaces the playlist with `next`, without setTracksToPlay so nothing auto-plays.
@@ -90,12 +105,6 @@ const locate = (tracks: Track[], at: number) => {
   return { index, offset }
 }
 
-const same = (a: Track[], b: Track[]) =>
-  a.length === b.length &&
-  a.every(
-    (t, i) => t.id === b[i].id && t.title === b[i].title && t.duration === b[i].duration && t.trim === b[i].trim,
-  )
-
 export function Editor() {
   const stage = useRef<HTMLDivElement>(null)
   const section = useRef<HTMLElement>(null)
@@ -103,7 +112,13 @@ export function Editor() {
   const commands = useAudio((s) => s.commands)
   const [sessionReady, setSessionReady] = useState(false)
   const { width, height } = useFrame(frameSize)
-  const { scale, mode, color, image, fit } = useCanvas()
+  // separate selectors: the editor is the parent of the transport and timeline, so it must not
+  // re-render for canvas fields it does not use
+  const scale = useCanvas((s) => s.scale)
+  const mode = useCanvas((s) => s.mode)
+  const color = useCanvas((s) => s.color)
+  const image = useCanvas((s) => s.image)
+  const fit = useCanvas((s) => s.fit)
   const templateId = useTemplate((s) => s.id)
   const preview = usePreview((s) => s.active)
   const frameSizePx = useElementSize(frame, supported)
@@ -117,11 +132,15 @@ export function Editor() {
   useShortcuts()
   useMediaSession()
 
-  // the timeline draws each track's waveform; decoding happens here, off the render path
-  const trackUrls = useAudio((s) => s.tracks.map((t) => t.url).join("\n"))
+  // the timeline draws each track's waveform; decoding happens here, off the render path.
+  // `tracks` only changes identity when the playlist really changed, so it is the dep.
+  const tracks = useAudio((s) => s.tracks)
   useEffect(() => {
-    void hydrateWaveforms()
-  }, [trackUrls])
+    void hydrateWaveforms((url) => {
+      const id = fileFor(url)?.id
+      return id ? peaksKey(id) : undefined
+    })
+  }, [tracks])
 
   // likewise the reset: emptying the playlist needs the Webamp the editor owns
   useEffect(() => {
@@ -192,8 +211,17 @@ export function Editor() {
     // the constructor already loaded a bundled skin, so a first pass only warms the picker.
     // A saved skin resolves after hydration, later than the constructor, so it still loads.
     if (!first || template.url) void loadSkin(template)
-    if (first) void prefetchSkins()
   }, [templateId, savedUrl])
+
+  // the picker's thumbnails are nice-to-have: they wait for the session and an idle moment,
+  // rather than competing with the restore and the first waveform decodes
+  useEffect(() => {
+    if (!supported || !sessionReady) return
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 500))
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout
+    const id = idle(() => void prefetchSkins())
+    return () => cancel(id)
+  }, [sessionReady])
 
   // the stage node survives unmount, so each mounted editor re-parents it into its own layout
   useEffect(() => {
@@ -209,21 +237,25 @@ export function Editor() {
   useEffect(() => {
     if (!supported || !stage.current) return
     const webamp = getWebamp()
+    // StrictMode mounts this twice; only the surviving mount gets to finish the boot
+    let alive = true
     void renderOnce().then(() => {
+      if (!alive) return
       // one cursor for the whole editor: borrow the skin's main-window cursor once the skin has loaded
       const main = document.querySelector("#webamp #main-window")
       const cursor = main ? getComputedStyle(main).cursor : ""
       if (section.current && cursor.startsWith("url")) section.current.style.cursor = cursor
       void restoreSession(webamp).then(() => {
+        if (!alive) return
         saveSession(webamp, getCurrentIndex())
         setSessionReady(true)
       })
     })
     const store = useAudio.getState()
     const unsubState = webamp.__onStateChange(() => {
-      const next = readPlaylist(webamp)
       const state = useAudio.getState()
-      const tracksChanged = !same(state.tracks, next)
+      const tracksChanged = mirrorStale(webamp.getPlaylistTracks(), state.tracks, state.trims)
+      const next = tracksChanged ? readPlaylist(webamp) : state.tracks
       if (tracksChanged) store.setTracks(next)
       const status = webamp.getMediaStatus()
       if (status !== state.status) store.setStatus(status)
@@ -260,6 +292,7 @@ export function Editor() {
       if (info && pendingSeek.current) pendingSeek.current.loaded = true
     })
     return () => {
+      alive = false
       unsubState()
       unsubTrack()
     }
@@ -347,6 +380,24 @@ export function Editor() {
     useAudio.getState().clearCommands()
   }, [commands, sessionReady])
 
+  const frameStyle = useMemo(
+    () => ({
+      width: `min(100cqw, ${width / height} * 100cqh)`,
+      aspectRatio: `${width} / ${height}`,
+      ...(mode === "transparent"
+        ? {}
+        : mode === "image" && image
+          ? {
+              backgroundImage: `url(${image})`,
+              backgroundSize: fit,
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }
+          : { background: color }),
+    }),
+    [width, height, mode, image, fit, color],
+  )
+
   if (!supported) {
     return (
       <section className="grid place-items-center bg-graphite p-4 md:p-8">
@@ -379,24 +430,7 @@ export function Editor() {
     >
       {/* container units size the frame to the largest box of the ratio that fits */}
       <div className="grid min-h-0 w-full place-items-center @container-size">
-        <div
-          ref={frame}
-          className={cn("relative", mode === "transparent" && "checkerboard")}
-          style={{
-            width: `min(100cqw, ${width / height} * 100cqh)`,
-            aspectRatio: `${width} / ${height}`,
-            ...(mode === "transparent"
-              ? {}
-              : mode === "image" && image
-                ? {
-                    backgroundImage: `url(${image})`,
-                    backgroundSize: fit,
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                  }
-                : { background: color }),
-          }}
-        >
+        <div ref={frame} className={cn("relative", mode === "transparent" && "checkerboard")} style={frameStyle}>
           {/* preview is a look at the video, not a player: nothing in the skin responds */}
           <div
             className={cn(

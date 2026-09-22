@@ -107,11 +107,19 @@ export const runExport = async (req: ExportRequest) => {
       toast.setProgress((frames / Math.max(1, totalFrames)) * 100)
     }
 
+    // how many segments each track feeds: a track in one segment is transferred outright, and only
+    // a shared one is copied, since a transfer detaches the buffer here
+    const uses = new Map<number, number>()
+    for (const s of segments) for (const i of s.trackIndices) uses.set(i, (uses.get(i) ?? 0) + 1)
+
     const runSegment = (seg: Segment, index: number) =>
       new Promise<void>((resolve, reject) => {
         const worker = new Worker(new URL("../../../shared/lib/export/export.worker.ts", import.meta.url), { type: "module" })
         workers.push(worker)
-        const tracks = seg.trackIndices.map((i) => decoded.get(i)!)
+        const tracks = seg.trackIndices.map((i) => {
+          const t = decoded.get(i)!
+          return uses.get(i)! > 1 ? { ...t, channels: t.channels.map((c) => c.slice()) } : t
+        })
         const msg: StartMessage = {
           type: "start",
           archive,
@@ -161,10 +169,7 @@ export const runExport = async (req: ExportRequest) => {
           worker.terminate()
           reject(new Error(e.message))
         }
-        // channels are copied per segment, so a track shared by two segments keeps its data here
-        const copies = tracks.map((t) => ({ ...t, channels: t.channels.map((c) => c.slice()) }))
-        msg.tracks = copies.map((t) => ({ title: t.title, duration: t.duration, kbps: t.kbps, sampleRate: t.sampleRate, channels: t.channels }))
-        worker.postMessage(msg, copies.flatMap(transferables))
+        worker.postMessage(msg, tracks.flatMap(transferables))
       })
 
     // a few segments at a time; hardware encoders do not scale past that anyway

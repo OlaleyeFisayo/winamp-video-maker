@@ -121,13 +121,12 @@ const cache = new Map<string, string>()
 
 /**
  * Downloads every skin once so the picker can show real art before anything is chosen.
- * Sequential and quiet: nothing is waiting on it, and one at a time keeps it out of the way
- * of whatever the user is actually doing. The blobs double as the pick-it-later cache.
+ * The downloads run together (the network is the long pole); the thumbnails are then built
+ * one at a time in the worker, and come from the cache on every visit after the first.
+ * The blobs double as the pick-it-later cache.
  */
 export const prefetchSkins = async () => {
-  for (const template of TEMPLATES) {
-    await primeSkin(template)
-  }
+  await Promise.all(TEMPLATES.map((t) => primeSkin(t)))
 }
 
 /** Builds the thumbnail for a skin already on screen. No progress notice: nothing is waiting on it. */
@@ -140,7 +139,7 @@ export const primeSkin = async (template: Template) => {
     const url = URL.createObjectURL(blob)
     cache.set(template.id, url)
     if (useTemplate.getState().id === template.id) useTemplate.getState().setArchive(url)
-    const thumb = await skinThumbUrl(await blob.arrayBuffer())
+    const thumb = await skinThumbUrl(template.id, () => blob.arrayBuffer())
     if (thumb) useTemplate.getState().setThumb(template.id, thumb)
   } catch {
     // a missing thumbnail is cosmetic; the skin itself is already loaded
@@ -180,8 +179,7 @@ export const loadSkin = async (template: Template) => {
     const url = URL.createObjectURL(blob)
     cache.set(template.id, url)
 
-    void blob.arrayBuffer().then(async (buffer) => {
-      const thumb = await skinThumbUrl(buffer)
+    void skinThumbUrl(template.id, () => blob.arrayBuffer()).then((thumb) => {
       if (thumb) useTemplate.getState().setThumb(template.id, thumb)
     })
 

@@ -15,6 +15,11 @@ let ready = false
 /** The stored-file id and bytes behind a playlist row's blob URL, if it was appended through here. */
 export const fileFor = (url: string) => fileIds.get(url)
 
+/** IndexedDB key for a track's cached waveform peaks; lives and dies with the track's bytes. */
+export const peaksKey = (id: string) => `peaks:${id}`
+
+let lastManifest = ""
+
 /** Called after Webamp finishes a mutation, including an append or a remove/rebuild. */
 export const saveSession = (webamp: Webamp, current: number | null) => {
   if (!ready) return
@@ -24,13 +29,20 @@ export const saveSession = (webamp: Webamp, current: number | null) => {
     title: t.title ?? t.defaultName ?? "Untitled",
     trim: trims[t.url] ?? null,
   }))
-  writeManifest(buildManifest(rows, fileIds, current === null ? undefined : rows[current]?.url))
+  const manifest = buildManifest(rows, fileIds, current === null ? undefined : rows[current]?.url)
+  // localStorage writes are synchronous; a mirror update that changed nothing skips the write
+  const json = JSON.stringify(manifest)
+  if (json !== lastManifest) {
+    lastManifest = json
+    writeManifest(manifest)
+  }
   const live = new Set(rows.map((t) => t.url))
   useAudio.getState().pruneTrims([...live])
   for (const [url, { id }] of fileIds) {
     if (!live.has(url)) {
       fileIds.delete(url)
       void deleteFile(id)
+      void deleteFile(peaksKey(id))
     }
   }
 }
@@ -62,15 +74,18 @@ const restoreOnce = async (webamp: Webamp) => {
   const manifest = readManifest()
   // Prune before reading, in one transaction, so later uploads cannot be swept away.
   // Saved skins are keyed `skin:` and are not session files — they outlive the playlist.
-  const skins = await listKeys("skin:")
-  await clearExcept([IMAGE_KEY, ...skins, ...manifest.map((t) => t.id)])
-  await restoreBackground()
+  const [skins, thumbs] = await Promise.all([listKeys("skin:"), listKeys("thumb:")])
+  await clearExcept([IMAGE_KEY, ...skins, ...thumbs, ...manifest.flatMap((t) => [t.id, peaksKey(t.id)])])
+  // nothing below needs the background; it lands whenever it lands
+  void restoreBackground()
 
+  // independent reads, so they go out together instead of one round trip per track
+  const stored = await Promise.all(manifest.map((entry) => getFile(entry.id)))
   const found: (ManifestEntry & { blob: Blob })[] = []
-  for (const entry of manifest) {
-    const stored = await getFile(entry.id)
-    if (stored?.blob instanceof Blob) found.push({ ...entry, blob: stored.blob })
-  }
+  manifest.forEach((entry, i) => {
+    const blob = stored[i]?.blob
+    if (blob instanceof Blob) found.push({ ...entry, blob })
+  })
   if (found.length) {
     webamp.appendTracks(found.map((t) => ({ blob: t.blob, metaData: { title: t.title, artist: "" } })))
     trackAppended(webamp, found.map((t) => t.id), found.map((t) => t.blob))

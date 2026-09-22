@@ -1,6 +1,6 @@
 import { create } from "zustand"
-import { key } from "../lib/storageKeys"
-import { persist } from "zustand/middleware"
+import { key, lazyStorage } from "../lib/storageKeys"
+import { createJSONStorage, persist } from "zustand/middleware"
 import { PRESETS, type PresetId } from "../lib/presets"
 
 export const SIZE_MIN = 16
@@ -33,6 +33,7 @@ export const useFrame = create<Frame>()(
     }),
     {
       name: key("frame"),
+      storage: createJSONStorage(() => lazyStorage),
       partialize: (s) => ({ ratio: s.ratio, custom: s.custom }),
       // frameSize asserts the preset exists, so a ratio from an older build must not survive
       merge: (stored, current) => {

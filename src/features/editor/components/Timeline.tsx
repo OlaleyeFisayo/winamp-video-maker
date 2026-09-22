@@ -1,7 +1,7 @@
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react"
 import { IconArrowsHorizontal, IconMinus, IconPlus, IconScissors } from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
-import { effectiveDuration, playheadFraction, playheadTime, useAudio } from "../../../shared/store/useAudio"
+import { effectiveDuration, playheadTime, useAudio, type Track } from "../../../shared/store/useAudio"
 import { useTheme } from "../../../shared/store/useTheme"
 import { useWaveforms } from "../../../shared/store/useWaveforms"
 import { ZOOM_MAX, ZOOM_MIN, useTimelineZoom } from "../../../shared/store/useTimelineZoom"
@@ -12,6 +12,8 @@ import { cn } from "../../../shared/lib/cn"
 const STEPS = [0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300]
 const MIN_LABEL_GAP = 64
 const KEY_STEP = 5
+/** Width assumed before the first measurement, so a long playlist never renders thousands of ticks. */
+const FALLBACK_WIDTH = 600
 
 /** Smallest step whose labels sit at least MIN_LABEL_GAP px apart. */
 const pickStep = (total: number, width: number) =>
@@ -19,63 +21,114 @@ const pickStep = (total: number, width: number) =>
 
 const label = (t: number) => (t < 60 ? `${t}s` : formatTime(t))
 
-/** How loud the waveform reads against the block; the active track's is stronger. */
-const WAVE_ALPHA = { active: 0.38, idle: 0.18 }
+/** The contrast token flips between black and white; read once per theme, not per canvas. */
+const contrastFor = (() => {
+  const cache = new Map<string, string>()
+  return (theme: string) => {
+    let c = cache.get(theme)
+    if (!c) {
+      c = getComputedStyle(document.documentElement).getPropertyValue("--contrast").trim() || "#FFFFFF"
+      cache.set(theme, c)
+    }
+    return c
+  }
+})()
 
 type WaveProps = { url: string; active: boolean }
 
 /**
  * The track's peaks, mirrored about the centre line and drawn behind its label. Canvas rather
- * than one element per bucket: 400 buckets a track adds up, and this redraws cheaply.
+ * than one element per bucket: 400 buckets a track adds up, and this redraws cheaply. The
+ * active/idle strength is CSS opacity, so a track change repaints nothing.
  */
 function Waveform({ url, active }: WaveProps) {
   const canvas = useRef<HTMLCanvasElement>(null)
-  const box = useRef<HTMLDivElement>(null)
   const peaks = useWaveforms((s) => s.peaks[url])
-  const { width, height } = useElementSize(box, true)
-  // the contrast token flips between black and white, so the colour is read at paint time
+  const { width, height } = useElementSize(canvas, true)
   const theme = useTheme((s) => s.theme)
 
   useEffect(() => {
     const el = canvas.current
     if (!el || !peaks || width < 1 || height < 1) return
-    const ctx = el.getContext("2d")
-    if (!ctx) return
+    // one paint per frame: a wheel burst or resize drag coalesces instead of drawing per event
+    const id = requestAnimationFrame(() => {
+      const ctx = el.getContext("2d")
+      if (!ctx) return
+      const dpr = window.devicePixelRatio || 1
+      const w = Math.round(width * dpr)
+      const h = Math.round(height * dpr)
+      // assigning width/height reallocates the bitmap even when unchanged, so only do it on change
+      if (el.width !== w || el.height !== h) {
+        el.width = w
+        el.height = h
+      }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, width, height)
+      ctx.fillStyle = contrastFor(theme)
 
-    const dpr = window.devicePixelRatio || 1
-    el.width = Math.round(width * dpr)
-    el.height = Math.round(height * dpr)
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, width, height)
-
-    const colour = getComputedStyle(el).getPropertyValue("--contrast").trim() || "#FFFFFF"
-    ctx.fillStyle = colour
-    ctx.globalAlpha = active ? WAVE_ALPHA.active : WAVE_ALPHA.idle
-
-    // one bar per pixel column, so a narrow block samples the peaks rather than cramming them
-    const mid = height / 2
-    const columns = Math.max(1, Math.floor(width))
-    for (let x = 0; x < columns; x++) {
-      const peak = peaks[Math.min(peaks.length - 1, Math.floor((x / columns) * peaks.length))]
-      // a floor of half a pixel keeps silence as a centre line instead of a gap
-      const half = Math.max(0.5, peak * mid)
-      ctx.fillRect(x, mid - half, 1, half * 2)
-    }
-  }, [peaks, width, height, active, theme])
+      // one bar per pixel column, so a narrow block samples the peaks rather than cramming them
+      const mid = height / 2
+      const columns = Math.max(1, Math.floor(width))
+      const path = new Path2D()
+      for (let x = 0; x < columns; x++) {
+        const peak = peaks[Math.min(peaks.length - 1, Math.floor((x / columns) * peaks.length))]
+        // a floor of half a pixel keeps silence as a centre line instead of a gap
+        const half = Math.max(0.5, peak * mid)
+        path.rect(x, mid - half, 1, half * 2)
+      }
+      ctx.fill(path)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [peaks, width, height, theme])
 
   return (
-    <div ref={box} aria-hidden className="pointer-events-none absolute inset-0">
-      <canvas ref={canvas} className="size-full" />
+    <canvas
+      ref={canvas}
+      aria-hidden
+      className={cn("pointer-events-none absolute inset-0 size-full", active ? "opacity-[0.38]" : "opacity-[0.18]")}
+    />
+  )
+}
+
+type Layout = { durations: number[]; starts: number[]; total: number }
+
+const layoutOf = (tracks: Track[]): Layout => {
+  // a cut shortens the track everywhere, so the timeline measures the trimmed length
+  const durations = tracks.map(effectiveDuration)
+  const starts: number[] = []
+  let total = 0
+  for (const d of durations) {
+    starts.push(total)
+    total += d
+  }
+  return { durations, starts, total }
+}
+
+/**
+ * The only part of the timeline that moves with playback. It subscribes to the playhead alone,
+ * so the ticks, blocks and waveforms above it never render on a time tick.
+ */
+function Playhead({ total }: { total: number }) {
+  const head = useAudio(playheadTime)
+  if (head === null || total <= 0) return null
+  return (
+    // the bar takes the pointer itself, so the marker never intercepts a drag
+    <div aria-hidden className="pointer-events-none absolute inset-y-0 z-10" style={{ left: `${(head / total) * 100}%` }}>
+      <div className="absolute inset-y-0 w-px bg-contrast" />
+      {/* the grip: the timeline has always been draggable, nothing said so */}
+      <div className="absolute -top-1.5 size-3 -translate-x-1/2 rounded-full bg-contrast" />
     </div>
   )
 }
 
 export function Timeline() {
-  const { tracks, current, time, enqueue } = useAudio()
+  const tracks = useAudio((s) => s.tracks)
+  const current = useAudio((s) => s.current)
+  const enqueue = useAudio((s) => s.enqueue)
   const viewport = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
+  const slider = useRef<HTMLDivElement>(null)
   const { width } = useElementSize(inner, tracks.length > 0)
-  const dragging = useRef(false)
   const zoom = useTimelineZoom((s) => s.zoom)
   // the viewport only exists once there are tracks, so the gestures bind when it appears
   const mounted = tracks.length > 0
@@ -150,46 +203,63 @@ export function Timeline() {
     }
   }, [mounted])
 
-  // follow the playhead once it leaves the visible slice, but never fight a drag
-  const headFrac = playheadFraction(useAudio())
+  const { durations, starts, total } = useMemo(() => layoutOf(tracks), [tracks])
+
+  // the parts of the timeline that move with playback, done by hand off a store subscription so
+  // no component renders per tick: the slider's spoken value, and following the playhead once
+  // it leaves the visible slice (never fighting a drag)
   useEffect(() => {
-    const box = viewport.current
-    if (!box || dragging.current || zoom === 1) return
-    const x = headFrac * box.scrollWidth
-    if (x < box.scrollLeft || x > box.scrollLeft + box.clientWidth) {
-      box.scrollLeft = Math.max(0, x - box.clientWidth / 2)
+    const follow = (head: number | null) => {
+      const el = slider.current
+      if (el) {
+        el.setAttribute("aria-valuenow", String(Math.round(head ?? 0)))
+        el.setAttribute("aria-valuetext", head === null ? "Not playing" : formatTime(head))
+      }
+      const box = viewport.current
+      if (!box || head === null || total <= 0 || box.dataset.dragging || useTimelineZoom.getState().zoom === 1) return
+      const x = (head / total) * box.scrollWidth
+      if (x < box.scrollLeft || x > box.scrollLeft + box.clientWidth) {
+        box.scrollLeft = Math.max(0, x - box.clientWidth / 2)
+      }
     }
-  }, [headFrac, zoom])
+    follow(playheadTime(useAudio.getState()))
+    return useAudio.subscribe((s, p) => {
+      if (s.time !== p.time || s.current !== p.current || s.tracks !== p.tracks) follow(playheadTime(s))
+    })
+  }, [total])
+  const step = total > 0 ? pickStep(total, width || FALLBACK_WIDTH) : 1
+  const ticks = useMemo(() => {
+    const out: number[] = []
+    for (let t = step / 2; t < total; t += step / 2) out.push(t)
+    return out
+  }, [step, total])
 
   if (tracks.length === 0) return null
 
-  // a cut shortens the track everywhere, so the timeline measures the trimmed length
-  const durations = tracks.map(effectiveDuration)
-  const total = durations.reduce((a, b) => a + b, 0)
-  const starts = durations.map((_, i) => durations.slice(0, i).reduce((a, b) => a + b, 0))
   const pct = (t: number) => (total > 0 ? `${(t / total) * 100}%` : "0%")
-
-  const step = total > 0 && width > 0 ? pickStep(total, width) : 1
-  const ticks: number[] = []
-  for (let t = step / 2; t < total; t += step / 2) ticks.push(t)
-
-  const head = current === null ? null : starts[current] + Math.min(time, durations[current])
 
   const seekAt = (e: PointerEvent<HTMLDivElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
     const frac = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width))
     enqueue({ type: "seek", time: frac * total })
   }
+  // the drag flag lives on the viewport node so the playhead's scroll-follow can read it
+  const setDragging = (on: boolean) => {
+    const box = viewport.current
+    if (!box) return
+    if (on) box.dataset.dragging = "true"
+    else delete box.dataset.dragging
+  }
   // pointers only ever scrub: the pinch lives on the touch events, which preventDefault
   // suppresses these for anyway
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (total === 0) return
-    dragging.current = true
+    setDragging(true)
     e.currentTarget.setPointerCapture(e.pointerId)
     seekAt(e)
   }
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
-    if (!dragging.current) return
+    if (!viewport.current?.dataset.dragging) return
     // a drag past the edge of the zoomed slice pulls the view along with the hand
     // ponytail: scrolls by the overshoot per move; a rAF loop if a held pointer needs to keep crawling
     const box = viewport.current
@@ -200,10 +270,9 @@ export function Timeline() {
     }
     seekAt(e)
   }
-  const onPointerUp = () => {
-    dragging.current = false
-  }
+  const onPointerUp = () => setDragging(false)
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    const head = playheadTime(useAudio.getState())
     if (head === null) return
     const dir = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0
     if (!dir) return
@@ -218,12 +287,11 @@ export function Timeline() {
             the top edge without being cut off */}
         <div ref={inner} className="relative" style={{ width: `${zoom * 100}%` }}>
           <div
+            ref={slider}
             role="slider"
             aria-label="Timeline"
             aria-valuemin={0}
             aria-valuemax={Math.round(total)}
-            aria-valuenow={Math.round(head ?? 0)}
-            aria-valuetext={head === null ? "Not playing" : formatTime(head)}
             tabIndex={0}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -273,14 +341,7 @@ export function Timeline() {
               ))}
             </div>
           </div>
-          {head !== null && total > 0 && (
-            // the bar takes the pointer itself, so the marker never intercepts a drag
-            <div aria-hidden className="pointer-events-none absolute inset-y-0 z-10" style={{ left: pct(head) }}>
-              <div className="absolute inset-y-0 w-px bg-contrast" />
-              {/* the grip: the timeline has always been draggable, nothing said so */}
-              <div className="absolute -top-1.5 size-3 -translate-x-1/2 rounded-full bg-contrast" />
-            </div>
-          )}
+          <Playhead total={total} />
         </div>
       </div>
       <Tools />
@@ -290,7 +351,10 @@ export function Timeline() {
 
 /** Zoom controls, and the cut that the X shortcut also runs. */
 function Tools() {
-  const { zoom, in: zoomIn, out: zoomOut, fit } = useTimelineZoom()
+  const zoom = useTimelineZoom((s) => s.zoom)
+  const zoomIn = useTimelineZoom((s) => s.in)
+  const zoomOut = useTimelineZoom((s) => s.out)
+  const fit = useTimelineZoom((s) => s.fit)
   const canCut = useAudio((s) => s.current !== null)
 
   return (

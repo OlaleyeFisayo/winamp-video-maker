@@ -80,7 +80,8 @@ export const useAudio = create<Audio>((set) => ({
       return kept.length === Object.keys(s.trims).length ? s : { trims: Object.fromEntries(kept) }
     }),
   enqueue: (command) => set((s) => ({ commands: [...s.commands, command] })),
-  clearCommands: () => set({ commands: [] }),
+  // a no-op when already empty, so draining the queue does not itself trigger a render
+  clearCommands: () => set((s) => (s.commands.length === 0 ? s : { commands: [] })),
 }))
 
 /** Global timeline position of the playhead, or null when nothing is playing. */

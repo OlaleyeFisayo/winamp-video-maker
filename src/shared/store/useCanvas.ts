@@ -1,6 +1,6 @@
 import { create } from "zustand"
-import { key } from "../lib/storageKeys"
-import { persist } from "zustand/middleware"
+import { key, lazyStorage } from "../lib/storageKeys"
+import { createJSONStorage, persist } from "zustand/middleware"
 import { deleteFile, getFile, putFile } from "../lib/sessionFiles"
 
 const HEX = /^#[0-9a-f]{6}$/i
@@ -65,6 +65,7 @@ export const useCanvas = create<Canvas>()(
     }),
     {
       name: key("canvas"),
+      storage: createJSONStorage(() => lazyStorage),
       // the image is bytes, not JSON: it lives in the session file store and comes back
       // through restoreBackground below
       partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit }),

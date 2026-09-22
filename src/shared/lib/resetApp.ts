@@ -30,9 +30,11 @@ export const resetApp = async (clearPlaylist?: () => void) => {
   //    those stay on screen, and revoking them would break the picker and the loaded skin.
   useCanvas.getState().setImage(null)
 
-  // 3. Drop the track audio and the background bytes, keeping every saved skin. Same prune the
-  //    session restore runs, so both agree on what outlives a reset.
-  await clearExcept(await listKeys("skin:"))
+  // 3. Drop the track audio, its cached waveforms and the background bytes, keeping every saved
+  //    skin and every skin thumbnail. Same prune the session restore runs, so both agree on what
+  //    outlives a reset.
+  const [skins, thumbs] = await Promise.all([listKeys("skin:"), listKeys("thumb:")])
+  await clearExcept([...skins, ...thumbs])
 
   // 4. Back to the defaults each store declares.
   useAudio.setState({ tracks: [], current: null, status: "STOPPED", time: 0, commands: [] })

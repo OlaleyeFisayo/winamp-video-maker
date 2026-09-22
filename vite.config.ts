@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: { port: 3000, strictPort: true },
+    // module workers, so the thumbnail and export workers share the renderer code as imports
+    worker: { format: 'es' },
     build: {
       // the webamp chunk is one prebuilt vendor module that cannot be split further, so the
       // default 500kB warning only ever fires for it and hides anything worth acting on

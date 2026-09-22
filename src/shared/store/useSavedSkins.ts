@@ -2,7 +2,7 @@ import { create } from "zustand"
 import { key } from "../lib/storageKeys"
 import { persist } from "zustand/middleware"
 import { deleteFile, getFile, putFile } from "../lib/sessionFiles"
-import { skinThumbUrl } from "../lib/skinThumb"
+import { skinThumbUrl, thumbKey } from "../lib/skinThumb"
 import { DEFAULT_TEMPLATE, TEMPLATES, type Template } from "../lib/templates"
 import { useTemplate } from "./useTemplate"
 
@@ -70,40 +70,52 @@ export const savedTemplate = (id: string): Template | undefined => {
 export const findTemplate = (id: string): Template | undefined =>
   TEMPLATES.find((t) => t.id === id) ?? savedTemplate(id)
 
-/** Writes the archive to IndexedDB and registers the skin. Returns it as a Template. */
-export const saveSkin = async (id: string, name: string, blob: Blob): Promise<Template> => {
+/**
+ * Writes the archive to IndexedDB and registers the skin. Returns it as a Template, or null
+ * when the archive is not a classic skin — decided by whether a thumbnail can be drawn from it,
+ * which is the same parse the picker needs anyway.
+ */
+export const saveSkin = async (id: string, name: string, blob: Blob): Promise<Template | null> => {
+  const thumb = await skinThumbUrl(id, () => blob.arrayBuffer())
+  if (!thumb) return null
   await putFile(skinKey(id), blob, name)
   const url = URL.createObjectURL(blob)
   const store = useSavedSkins.getState()
   store.add({ id, name })
   store.setUrl(id, url)
-  void blob.arrayBuffer().then(async (buffer) => {
-    const thumb = await skinThumbUrl(buffer)
-    if (thumb) useSavedSkins.getState().setThumb(id, thumb)
-  })
+  store.setThumb(id, thumb)
   return { id, name, url }
 }
 
 export const removeSavedSkin = async (id: string) => {
   useSavedSkins.getState().remove(id)
-  await deleteFile(skinKey(id))
+  await Promise.all([deleteFile(skinKey(id)), deleteFile(thumbKey(id))])
 }
 
 /** Rebuilds blob URLs and thumbnails for every saved skin. Called once on boot. */
 export const hydrateSavedSkins = async () => {
-  for (const skin of useSavedSkins.getState().skins) {
-    if (useSavedSkins.getState().urls[skin.id]) continue
-    const stored = await getFile(skinKey(skin.id))
-    if (!(stored?.blob instanceof Blob)) {
-      // the bytes are gone; drop the orphaned entry rather than show a skin that cannot load
-      useSavedSkins.getState().remove(skin.id)
-      // and do not leave the editor pointing at a skin that will never resolve
-      const template = useTemplate.getState()
-      if (template.id === skin.id) template.setId(DEFAULT_TEMPLATE.id)
-      continue
+  const skins = useSavedSkins.getState().skins.filter((s) => !useSavedSkins.getState().urls[s.id])
+  // all the reads at once: they are independent, and IndexedDB pipelines them
+  const stored = await Promise.all(skins.map((s) => getFile(skinKey(s.id))))
+  const urls: Record<string, string> = {}
+  const live: { id: string; blob: Blob }[] = []
+  skins.forEach((skin, i) => {
+    const blob = stored[i]?.blob
+    if (blob instanceof Blob) {
+      urls[skin.id] = URL.createObjectURL(blob)
+      live.push({ id: skin.id, blob })
+      return
     }
-    useSavedSkins.getState().setUrl(skin.id, URL.createObjectURL(stored.blob))
-    const thumb = await skinThumbUrl(await stored.blob.arrayBuffer())
-    if (thumb) useSavedSkins.getState().setThumb(skin.id, thumb)
+    // the bytes are gone; drop the orphaned entry rather than show a skin that cannot load
+    useSavedSkins.getState().remove(skin.id)
+    // and do not leave the editor pointing at a skin that will never resolve
+    const template = useTemplate.getState()
+    if (template.id === skin.id) template.setId(DEFAULT_TEMPLATE.id)
+  })
+  if (live.length) useSavedSkins.setState((s) => ({ urls: { ...s.urls, ...urls } }))
+  // thumbnails come from the cache after the first visit; a miss is rendered in the worker
+  for (const { id, blob } of live) {
+    const thumb = await skinThumbUrl(id, () => blob.arrayBuffer())
+    if (thumb) useSavedSkins.getState().setThumb(id, thumb)
   }
 }

@@ -26,9 +26,10 @@ const setHandler = (action: MediaSessionAction, handler: MediaSessionActionHandl
  * The title is the one from the tracks list, so a rename shows up here too.
  */
 export const useMediaSession = () => {
-  const { tracks, current, status, time } = useAudio()
-  const track = current === null ? null : (tracks[current] ?? null)
-  const many = tracks.length > 1
+  // the track object comes out of the store's array, so its identity holds between real changes
+  const track = useAudio((s) => (s.current === null ? null : (s.tracks[s.current] ?? null)))
+  const status = useAudio((s) => s.status)
+  const many = useAudio((s) => s.tracks.length > 1)
 
   // the card itself: cleared when nothing is loaded, so it does not outlive the playlist
   useEffect(() => {
@@ -42,17 +43,29 @@ export const useMediaSession = () => {
       status === "PLAYING" ? "playing" : status === "PAUSED" ? "paused" : "none"
   }, [status])
 
-  // the scrubber reads the current track, not the whole timeline, so it reports track-local values
+  // the scrubber reads the current track, not the whole timeline, so it reports track-local values.
+  // Driven by a store subscription rather than a render: the time ticks many times a second and
+  // the overlay only shows whole seconds anyway.
   useEffect(() => {
     if (!supported || !navigator.mediaSession.setPositionState) return
     const duration = track?.duration ?? 0
     if (!duration) return
-    try {
-      navigator.mediaSession.setPositionState({ duration, position: Math.min(time, duration) })
-    } catch {
-      // a position past the duration on the tick where the track changed; the next tick corrects it
+    let shown = -1
+    const report = (time: number) => {
+      const whole = Math.floor(time)
+      if (whole === shown) return
+      shown = whole
+      try {
+        navigator.mediaSession.setPositionState({ duration, position: Math.min(time, duration) })
+      } catch {
+        // a position past the duration on the tick where the track changed; the next tick corrects it
+      }
     }
-  }, [track, time])
+    report(useAudio.getState().time)
+    return useAudio.subscribe((s, p) => {
+      if (s.time !== p.time) report(s.time)
+    })
+  }, [track])
 
   useEffect(() => {
     if (!supported) return

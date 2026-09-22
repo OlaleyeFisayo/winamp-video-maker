@@ -1,6 +1,6 @@
 import { create } from "zustand"
-import { key } from "../lib/storageKeys"
-import { persist } from "zustand/middleware"
+import { key, lazyStorage } from "../lib/storageKeys"
+import { createJSONStorage, persist } from "zustand/middleware"
 
 /** Used for the file name, the field's placeholder and the Export tooltip when the name is blank. */
 export const DEFAULT_NAME = "semy-elite"
@@ -16,6 +16,6 @@ export const useProject = create<Project>()(
       name: "",
       setName: (name) => set({ name }),
     }),
-    { name: key("project") },
+    { name: key("project"), storage: createJSONStorage(() => lazyStorage) },
   ),
 )
