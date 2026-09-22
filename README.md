@@ -10,7 +10,7 @@ Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 
 - Play your audio through classic Winamp skins, including Sony, Windows XP, Windows 98, and Netscape.
 - Add multiple tracks, rename them, drag them into the order you want, and scrub through your playlist on a timeline showing each song’s waveform.
-- Cut a track at the playhead to drop everything after it. Cuts are trim points, so the original audio is never overwritten.
+- Zoom the timeline, and cut a track at the playhead to drop everything after it. Cuts are trim points, so the original audio is never overwritten.
 - Choose portrait, landscape, square, or custom frames and adjust the player size.
 - Use a colour, image, or transparent background and preview fullscreen.
 - Export your playlist as one video, each track separately, or selected tracks at 30/60 fps and 720p through 4K.
