@@ -1,104 +1,94 @@
-import { useState } from "react"
+import type { ReactNode } from "react"
 import { Link } from "react-router"
-import { IconBuildingStore, IconChevronLeft, IconChevronRight } from "@tabler/icons-react"
-import { IconButton, PanelSection } from "../../../shared/ui"
+import { IconPlus } from "@tabler/icons-react"
+import { Eyebrow, PanelSection } from "../../../shared/ui"
 import { useTemplate } from "../../../shared/store/useTemplate"
 import { useSavedSkins } from "../../../shared/store/useSavedSkins"
 import { TEMPLATES } from "../../../shared/lib/templates"
 import { cn } from "../../../shared/lib/cn"
-import { linkClass } from "../../../shared/lib/links"
 import { ROUTES } from "../../../shared/lib/routes"
+
+type Item = { id: string; name: string; thumb?: string }
+
+const tile =
+  "grid aspect-275/348 w-full place-items-center overflow-hidden rounded-sm border transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+
+function Tile({ item, selected, hint, onPick }: { item: Item; selected: boolean; hint?: string; onPick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onPick}
+      title={hint ? `${item.name} (${hint})` : item.name}
+      className={cn(tile, "bg-stage p-px", selected ? "border-contrast" : "border-rule hover:border-ash")}
+    >
+      {item.thumb ? (
+        <img src={item.thumb} alt={item.name} className="h-full w-full object-contain [image-rendering:pixelated]" />
+      ) : (
+        <span className="font-mono text-[11px] text-ash">—</span>
+      )}
+    </button>
+  )
+}
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Eyebrow>{label}</Eyebrow>
+      <div className="grid grid-cols-4 gap-1">{children}</div>
+    </div>
+  )
+}
 
 export function TemplateSection() {
   const { id, thumbs, setId } = useTemplate()
   const saved = useSavedSkins((s) => s.skins)
   const savedThumbs = useSavedSkins((s) => s.thumbs)
 
-  // saved skins first: they are the ones the user went and got
-  const items = [
-    ...saved.map((s) => ({ id: s.id, name: s.name, thumb: savedThumbs[s.id] })),
-    ...TEMPLATES.map((t) => ({ id: t.id, name: t.name, thumb: thumbs[t.id] })),
-  ]
-
-  // the viewed slide is tracked by id, not index: saved skins are prepended and arrive
-  // asynchronously, which would otherwise shift the view out from under the user
-  const [viewed, setViewed] = useState(id)
-  const at = Math.max(0, items.findIndex((t) => t.id === viewed))
-  const item = items[at]
-  // wraps: last -> first and first -> last, so neither arrow ever dead-ends
-  const step = (d: number) => setViewed(items[(at + d + items.length) % items.length].id)
+  const yours: Item[] = saved.map((s) => ({ id: s.id, name: s.name, thumb: savedThumbs[s.id] }))
+  const builtIn: Item[] = TEMPLATES.map((t) => ({ id: t.id, name: t.name, thumb: thumbs[t.id] }))
+  const current = yours.find((t) => t.id === id) ?? builtIn.find((t) => t.id === id)
+  const source = yours.some((t) => t.id === id) ? "Yours" : "Built in"
 
   return (
-    <PanelSection
-      title="Template"
-      collapsible
-      action={
-        <Link
-          to={ROUTES.marketplace}
-          title="Marketplace"
-          aria-label="Marketplace"
-          className={linkClass}
-        >
-          <IconBuildingStore size={16} stroke={1.5} aria-hidden />
-        </Link>
-      }
-    >
-      {item && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1">
-            <IconButton
-              aria-label="Previous template"
-              onClick={() => step(-1)}
-              className="shrink-0"
-            >
-              <IconChevronLeft size={16} stroke={1.5} aria-hidden />
-            </IconButton>
+    <PanelSection title="Template" collapsible>
+      <div className="flex flex-col gap-3">
+        <Group label={`Yours · ${yours.length}`}>
+          {/* the way in and the empty state at once: skins picked in the marketplace land here */}
+          <Link
+            to={ROUTES.marketplace}
+            aria-label="Get more skins"
+            title="Get more skins"
+            className={cn(tile, "border-dashed border-rule text-ash hover:border-ash hover:text-paper")}
+          >
+            <IconPlus size={16} stroke={1.5} aria-hidden />
+          </Link>
+          {yours.map((item) => (
+            <Tile key={item.id} item={item} selected={item.id === id} onPick={() => setId(item.id)} />
+          ))}
+        </Group>
 
-            <button
-              type="button"
-              aria-pressed={item.id === id}
-              onClick={() => setId(item.id)}
-              title={`Use ${item.name}`}
-              className={cn(
-                "min-w-0 flex-1 rounded-sm border p-1 transition-colors duration-100",
-                "focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2",
-                item.id === id ? "border-contrast" : "border-rule hover:border-ash",
-              )}
-            >
-              {/* ponytail: same picture box as the marketplace SkinCard, copied not shared —
-                  the label/busy/lazy differences made a shared component all props */}
-              <span className="grid aspect-275/348 w-full place-items-center overflow-hidden rounded-xs bg-stage">
-                {item.thumb ? (
-                  <img
-                    src={item.thumb}
-                    alt=""
-                    className="h-full w-full object-contain [image-rendering:pixelated]"
-                  />
-                ) : (
-                  <span className="font-mono text-[11px] text-ash">—</span>
-                )}
-              </span>
-            </button>
+        <Group label={`Built in · ${builtIn.length}`}>
+          {builtIn.map((item, i) => (
+            <Tile
+              key={item.id}
+              item={item}
+              selected={item.id === id}
+              hint={i === 0 ? "default" : undefined}
+              onPick={() => setId(item.id)}
+            />
+          ))}
+        </Group>
 
-            <IconButton
-              aria-label="Next template"
-              onClick={() => step(1)}
-              className="shrink-0"
-            >
-              <IconChevronRight size={16} stroke={1.5} aria-hidden />
-            </IconButton>
-          </div>
-
+        {current && (
           <p aria-live="polite" className="flex items-baseline justify-between gap-2 text-[13px] leading-[1.3]">
-            <span className="truncate text-paper" title={item.name}>
-              {item.name}
+            <span className="truncate text-paper" title={current.name}>
+              {current.name}
             </span>
-            <span className="shrink-0 font-mono text-ash">
-              {at + 1}/{items.length}
-            </span>
+            <span className="shrink-0 font-mono text-ash">{source}</span>
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </PanelSection>
   )
 }

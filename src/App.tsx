@@ -1,6 +1,6 @@
 import "./shared/store/useTheme"
 import { Component, lazy, Suspense, useEffect, type ReactNode } from "react"
-import { Navigate, Route, Routes } from "react-router"
+import { Route, Routes } from "react-router"
 import { Header } from "./features/header"
 import { TracksSection } from "./features/audio"
 import { TemplateSection } from "./features/templates"
@@ -10,6 +10,7 @@ import { ExportDialog } from "./features/export"
 import { HelpDialog } from "./features/help"
 import { ResetDialog } from "./features/reset"
 import { ShortcutsDialog } from "./features/shortcuts"
+import { NotFoundPage } from "./features/not-found"
 import { Button, Panel, Toaster } from "./shared/ui"
 import { cn } from "./shared/lib/cn"
 import { hydrateSavedSkins } from "./shared/store/useSavedSkins"
@@ -94,8 +95,7 @@ function App() {
       <Routes>
         <Route path={ROUTES.home} element={<EditorPage />} />
         <Route path={ROUTES.marketplace} element={<MarketplaceRoute />} />
-        {/* an unknown URL lands on the editor rather than a blank page */}
-        <Route path="*" element={<Navigate to={ROUTES.home} replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <ExportDialog />
       <HelpDialog />
