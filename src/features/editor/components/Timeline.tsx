@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react"
+import { memo, useEffect, useMemo, useRef, type KeyboardEvent, type PointerEvent } from "react"
 import { IconArrowsHorizontal, IconMinus, IconPlus, IconScissors } from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
 import { effectiveDuration, playheadTime, useAudio, type Track } from "../../../shared/store/useAudio"
@@ -34,14 +34,14 @@ const contrastFor = (() => {
   }
 })()
 
-type WaveProps = { url: string; active: boolean }
+type WaveProps = { url: string; active: boolean; fraction: number }
 
 /**
  * The track's peaks, mirrored about the centre line and drawn behind its label. Canvas rather
  * than one element per bucket: 400 buckets a track adds up, and this redraws cheaply. The
  * active/idle strength is CSS opacity, so a track change repaints nothing.
  */
-function Waveform({ url, active }: WaveProps) {
+function Waveform({ url, active, fraction }: WaveProps) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const peaks = useWaveforms((s) => s.peaks[url])
   const { width, height } = useElementSize(canvas, true)
@@ -50,8 +50,9 @@ function Waveform({ url, active }: WaveProps) {
   useEffect(() => {
     const el = canvas.current
     if (!el || !peaks || width < 1 || height < 1) return
-    // one paint per frame: a wheel burst or resize drag coalesces instead of drawing per event
-    const id = requestAnimationFrame(() => {
+    // drawn once a zoom or resize settles: meanwhile CSS stretches the last bitmap, which is
+    // far cheaper than reallocating and redrawing a canvas thousands of pixels wide every frame
+    const id = setTimeout(() => {
       const ctx = el.getContext("2d")
       if (!ctx) return
       const dpr = window.devicePixelRatio || 1
@@ -69,17 +70,19 @@ function Waveform({ url, active }: WaveProps) {
       // one bar per pixel column, so a narrow block samples the peaks rather than cramming them
       const mid = height / 2
       const columns = Math.max(1, Math.floor(width))
+      // a cut keeps the head of the file, so only that slice of the peaks belongs in the block
+      const span = Math.max(1, Math.floor(peaks.length * fraction))
       const path = new Path2D()
       for (let x = 0; x < columns; x++) {
-        const peak = peaks[Math.min(peaks.length - 1, Math.floor((x / columns) * peaks.length))]
+        const peak = peaks[Math.min(span - 1, Math.floor((x / columns) * span))]
         // a floor of half a pixel keeps silence as a centre line instead of a gap
         const half = Math.max(0.5, peak * mid)
         path.rect(x, mid - half, 1, half * 2)
       }
       ctx.fill(path)
-    })
-    return () => cancelAnimationFrame(id)
-  }, [peaks, width, height, theme])
+    }, 120)
+    return () => clearTimeout(id)
+  }, [peaks, width, height, theme, fraction])
 
   return (
     <canvas
@@ -121,6 +124,61 @@ function Playhead({ total }: { total: number }) {
   )
 }
 
+const pct = (t: number, total: number) => (total > 0 ? `${(t / total) * 100}%` : "0%")
+
+/*
+ * The ruler and the blocks are placed in percentages, so a zoom only widens their parent.
+ * Memoised so a zoom frame never re-renders them: past a few hundred ticks that render was
+ * what made a pinch lag behind the fingers.
+ */
+const Ruler = memo(function Ruler({ ticks, step, total }: { ticks: number[]; step: number; total: number }) {
+  return (
+    <div className="relative h-6 bg-ink">
+      {ticks.map((t) => {
+        const major = Math.abs((t / step) % 1) < 1e-6
+        return (
+          <div key={t} className="absolute top-0 h-full" style={{ left: pct(t, total) }}>
+            <div className={cn("w-px bg-rule", major ? "h-2" : "h-1")} />
+            {major && (
+              <span className="absolute left-1 top-1.5 font-mono text-[11px] leading-none text-ash">{label(t)}</span>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+})
+
+type BlocksProps = { tracks: Track[]; current: number | null; starts: number[]; durations: number[]; total: number }
+
+const Blocks = memo(function Blocks({ tracks, current, starts, durations, total }: BlocksProps) {
+  return (
+    <div className="relative h-9 bg-graphite">
+      {tracks.map((t, i) => (
+        <div
+          key={t.id}
+          data-active={i === current || undefined}
+          style={{ left: pct(starts[i], total), width: durations[i] ? pct(durations[i], total) : 4 }}
+          className={cn(
+            "absolute top-0 flex h-full min-w-1 items-center gap-2 overflow-hidden border-r border-rule px-2",
+            i === current && "outline-1 -outline-offset-1 outline-contrast",
+          )}
+        >
+          {/* the canvas sizes from its block, so zooming in draws more detail */}
+          <Waveform url={t.url} active={i === current} fraction={t.trim && t.duration ? t.trim / t.duration : 1} />
+          <span className="relative min-w-0 flex-1 truncate text-[13px] leading-none text-paper">{t.title}</span>
+          {t.trim != null && (
+            <IconScissors size={12} stroke={1.5} aria-label="Cut" className="relative shrink-0 text-ash" />
+          )}
+          <span className="relative shrink-0 font-mono text-[11px] leading-none text-ash">
+            {formatTime(durations[i])}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+})
+
 export function Timeline() {
   const tracks = useAudio((s) => s.tracks)
   const current = useAudio((s) => s.current)
@@ -140,23 +198,44 @@ export function Timeline() {
    */
   useEffect(() => {
     const box = viewport.current
-    if (!box) return
+    const strip = inner.current
+    if (!box || !strip) return
 
+    /**
+     * A gesture fires far faster than the timeline can render, so events only record where
+     * the zoom should go and one frame applies the latest. The width is written straight to
+     * the DOM before scrolling: waiting on React's render would read a stale scrollWidth and
+     * clamp the scroll, so the view would drift off the point being zoomed.
+     */
+    let target: number | null = null
+    let anchorX = 0
+    let frame = 0
+    const zoomNow = () => target ?? useTimelineZoom.getState().zoom
+    const apply = () => {
+      frame = 0
+      if (target === null) return
+      const x = anchorX - box.getBoundingClientRect().left
+      const anchored = (box.scrollLeft + x) / box.scrollWidth
+      strip.style.width = `${target * 100}%`
+      box.scrollLeft = anchored * box.scrollWidth - x
+      useTimelineZoom.getState().setZoom(target)
+      target = null
+    }
     /** Zooms to `next`, keeping the time under `clientX` still so it does not wander. */
     const zoomTo = (clientX: number, next: number) => {
-      const left = box.getBoundingClientRect().left
-      const anchored = (box.scrollLeft + (clientX - left)) / box.scrollWidth
-      useTimelineZoom.getState().setZoom(next)
-      requestAnimationFrame(() => {
-        box.scrollLeft = anchored * box.scrollWidth - (clientX - left)
-      })
+      target = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next))
+      anchorX = clientX
+      frame ||= requestAnimationFrame(apply)
     }
 
     const onWheel = (e: globalThis.WheelEvent) => {
       // plain scroll belongs to the page; only the zoom gesture is claimed
       if (!e.ctrlKey && !e.metaKey) return
       e.preventDefault()
-      zoomTo(e.clientX, useTimelineZoom.getState().zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15))
+      // scaled by the delta: a trackpad pinch sends many small ones, a mouse notch one big one
+      // capped so one mouse notch matches the zoom buttons' step
+      const dy = Math.min(25, Math.max(-25, e.deltaY))
+      zoomTo(e.clientX, zoomNow() * Math.exp(-dy * 0.01))
     }
 
     /**
@@ -195,6 +274,7 @@ export function Timeline() {
     box.addEventListener("touchend", onTouchEnd)
     box.addEventListener("touchcancel", onTouchEnd)
     return () => {
+      cancelAnimationFrame(frame)
       box.removeEventListener("wheel", onWheel)
       box.removeEventListener("touchstart", onTouchStart)
       box.removeEventListener("touchmove", onTouchMove)
@@ -235,8 +315,6 @@ export function Timeline() {
   }, [step, total])
 
   if (tracks.length === 0) return null
-
-  const pct = (t: number) => (total > 0 ? `${(t / total) * 100}%` : "0%")
 
   const seekAt = (e: PointerEvent<HTMLDivElement>) => {
     const box = e.currentTarget.getBoundingClientRect()
@@ -300,46 +378,8 @@ export function Timeline() {
             onKeyDown={onKeyDown}
             className="relative cursor-pointer touch-none select-none overflow-hidden rounded-sm border border-rule focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
           >
-            <div className="relative h-6 bg-ink">
-              {ticks.map((t) => {
-                const major = Math.abs((t / step) % 1) < 1e-6
-                return (
-                  <div key={t} className="absolute top-0 h-full" style={{ left: pct(t) }}>
-                    <div className={cn("w-px bg-rule", major ? "h-2" : "h-1")} />
-                    {major && (
-                      <span className="absolute left-1 top-1.5 font-mono text-[11px] leading-none text-ash">
-                        {label(t)}
-                      </span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="relative h-9 bg-graphite">
-              {tracks.map((t, i) => (
-                <div
-                  key={t.id}
-                  data-active={i === current || undefined}
-                  style={{ left: pct(starts[i]), width: durations[i] ? pct(durations[i]) : 4 }}
-                  className={cn(
-                    "absolute top-0 flex h-full min-w-1 items-center gap-2 overflow-hidden border-r border-rule px-2",
-                    i === current && "outline-1 -outline-offset-1 outline-contrast",
-                  )}
-                >
-                  {/* the canvas sizes from its block, so zooming in draws more detail */}
-                  <Waveform url={t.url} active={i === current} />
-                  <span className="relative min-w-0 flex-1 truncate text-[13px] leading-none text-paper">
-                    {t.title}
-                  </span>
-                  {t.trim != null && (
-                    <IconScissors size={12} stroke={1.5} aria-label="Cut" className="relative shrink-0 text-ash" />
-                  )}
-                  <span className="relative shrink-0 font-mono text-[11px] leading-none text-ash">
-                    {formatTime(durations[i])}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <Ruler ticks={ticks} step={step} total={total} />
+            <Blocks tracks={tracks} current={current} starts={starts} durations={durations} total={total} />
           </div>
           <Playhead total={total} />
         </div>
