@@ -6,7 +6,8 @@ import { acceptsFile } from "../../../shared/lib/acceptsFile"
 import { formatTime } from "../../../shared/lib/formatTime"
 import { cn } from "../../../shared/lib/cn"
 
-const ACCEPT = "audio/*"
+// ponytail: phones often leave file.type empty, so match by extension too
+const ACCEPT = "audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac"
 const SKIPPED = "Some files weren't audio and were skipped. Use MP3, WAV, OGG or FLAC."
 
 type NameProps = { title: string; onRename: (title: string) => void }
