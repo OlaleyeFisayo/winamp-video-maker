@@ -1,4 +1,3 @@
-import { create } from "zustand"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useCanvas } from "../../../shared/store/useCanvas"
 import { useFrame } from "../../../shared/store/useFrame"
@@ -6,6 +5,7 @@ import { useTemplate } from "../../../shared/store/useTemplate"
 import { putFile } from "../../../shared/lib/sessionFiles"
 import { clearPlaylist, getCurrentIndex, getWebamp, renameTrack } from "./webamp"
 import { fileFor, saveSession, trackAppended } from "./restoreSession"
+import { useHistory, type Row, type Snapshot } from "./historyStore"
 
 /**
  * Undo/redo as a stack of whole-workspace snapshots. Recorded by watching the stores rather than
@@ -16,29 +16,8 @@ import { fileFor, saveSession, trackAppended } from "./restoreSession"
  * step; switch to explicit commits from each setter if that ever bites.
  */
 
-type Row = { id: string; blob: Blob; title: string; trim: number | null }
-
-type Snapshot = {
-  template: string
-  frame: { ratio: ReturnType<typeof useFrame.getState>["ratio"]; custom: { width: number; height: number } }
-  canvas: {
-    scale: number
-    mode: ReturnType<typeof useCanvas.getState>["mode"]
-    color: string
-    fit: ReturnType<typeof useCanvas.getState>["fit"]
-    image: string | null
-    imageName: string | null
-    imageFile: Blob | null
-  }
-  playlist: Row[]
-}
-
-type History = { past: Snapshot[]; present: Snapshot | null; future: Snapshot[] }
-
 const LIMIT = 100
 const DEBOUNCE = 300
-
-export const useHistory = create<History>(() => ({ past: [], present: null, future: [] }))
 
 const take = (): Snapshot => {
   const { ratio, custom } = useFrame.getState()

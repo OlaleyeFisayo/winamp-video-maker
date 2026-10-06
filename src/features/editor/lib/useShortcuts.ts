@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { playheadTime, useAudio } from "../../../shared/store/useAudio"
 import { usePreview } from "../../../shared/store/usePreview"
 import { useReset } from "../../../shared/store/useReset"
-import { redo, undo } from "./history"
+import { redo, undo } from "./historyStore"
 
 /**
  * The action each key runs. The shortcuts dialog renders this same table, showing `display`

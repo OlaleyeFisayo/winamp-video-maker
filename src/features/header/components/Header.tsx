@@ -9,7 +9,7 @@ import {
   IconSun,
 } from "@tabler/icons-react"
 import { Button, IconButton } from "../../../shared/ui"
-import { redo, undo, useHistory } from "../../editor/lib/history"
+import { redo, undo, useHistory } from "../../editor/lib/historyStore"
 import { useAudio } from "../../../shared/store/useAudio"
 import { useExport } from "../../../shared/store/useExport"
 import { useHelp } from "../../../shared/store/useHelp"

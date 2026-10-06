@@ -2,14 +2,16 @@
 
 @font-face {
   font-family: "Ananias";
-  src: url("/fonts/ananias/Ananias.otf") format("opentype"),
+  src: url("/fonts/ananias/Ananias.woff2") format("woff2"),
+       url("/fonts/ananias/Ananias.otf") format("opentype"),
        url("/fonts/ananias/Ananias.ttf") format("truetype");
   font-weight: 400;
   font-display: swap;
 }
 @font-face {
   font-family: "Ananias";
-  src: url("/fonts/ananias/Ananias Bold.otf") format("opentype"),
+  src: url("/fonts/ananias/Ananias Bold.woff2") format("woff2"),
+       url("/fonts/ananias/Ananias Bold.otf") format("opentype"),
        url("/fonts/ananias/Ananias Bold.ttf") format("truetype");
   font-weight: 700;
   font-display: swap;
