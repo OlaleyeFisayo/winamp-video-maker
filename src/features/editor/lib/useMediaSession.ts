@@ -5,7 +5,7 @@ import { useAudio } from "../../../shared/store/useAudio"
 const SKIP = 10
 
 /** Artwork for the OS overlay; the one image the app ships. */
-const ARTWORK = [{ src: "/images/logo.png", sizes: "2000x2000", type: "image/png" }]
+const ARTWORK = [{ src: "/images/logo-192.png", sizes: "192x192", type: "image/png" }]
 
 const supported = typeof navigator !== "undefined" && "mediaSession" in navigator
 

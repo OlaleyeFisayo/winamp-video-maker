@@ -56,11 +56,13 @@ function EditorPage() {
         <TemplateSection />
         <TracksSection />
       </Panel>
-      <EditorBoundary>
-        <Suspense fallback={<section role="status" className="grid place-items-center bg-graphite p-8 text-ash">Loading editor…</section>}>
-          <Editor />
-        </Suspense>
-      </EditorBoundary>
+      <main className="contents">
+        <EditorBoundary>
+          <Suspense fallback={<section role="status" className="grid place-items-center bg-graphite p-8 text-ash">Loading editor…</section>}>
+            <Editor />
+          </Suspense>
+        </EditorBoundary>
+      </main>
       <Panel side="right">
         <FrameSection />
         <SizeSection />

@@ -1,0 +1,6 @@
+# Winamp Video Maker
+
+> Browser-based tool that turns audio into Winamp-style videos. Pick a classic skin, add tracks, set a background, and export MP4 or transparent WebM up to 4K.
+
+- [Editor](https://winamp-video-maker.vercel.app/): create and export a video
+- [Marketplace](https://winamp-video-maker.vercel.app/marketplace): browse skins

@@ -43,7 +43,9 @@ export function Header() {
     <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-rule bg-ink px-4 md:col-span-3">
       <div className="flex min-w-0 flex-1 items-center gap-3 md:flex-none">
         <img
-          src={theme === "dark" ? "/images/logo.png" : "/images/logo-light.png"}
+          src={theme === "dark" ? "/images/logo-192.png" : "/images/logo-light-192.png"}
+          width={40}
+          height={40}
           alt="winamp-video-maker"
           className="h-10 shrink-0"
         />

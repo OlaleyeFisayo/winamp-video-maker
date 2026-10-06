@@ -217,10 +217,9 @@ export function Editor() {
   // rather than competing with the restore and the first waveform decodes
   useEffect(() => {
     if (!supported || !sessionReady) return
-    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 500))
-    const cancel = window.cancelIdleCallback ?? window.clearTimeout
-    const id = idle(() => void prefetchSkins())
-    return () => cancel(id)
+    // ponytail: fixed delay keeps ~570KB of skins out of the load window; picker thumbnails fill in after
+    const id = window.setTimeout(() => void prefetchSkins(), 5000)
+    return () => window.clearTimeout(id)
   }, [sessionReady])
 
   // the stage node survives unmount, so each mounted editor re-parents it into its own layout

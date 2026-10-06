@@ -2,7 +2,7 @@
 
 <img src="public/images/logo.png" alt="Semy Elite logo for winamp-video-maker" width="240" />
 
-Turn audio into Winamp-style videos with classic skins, animated visualizers, custom backgrounds, and flexible export settings.
+Make Winamp-style videos from your audio. Pick classic skins, add tracks, set a background, and export MP4 or transparent WebM up to 4K, right in your browser.
 
 Created by **Festus-Olaleye Oluwafisayomi Oluwaseunfunmi and Semy Elite**.
 
