@@ -196,7 +196,7 @@ Opened by the header's help button. `Dialog` titled "About and keyboard shortcut
 
 Export never captures the screen. The skin is drawn again from its own sprite sheets, off the main thread, so a three-minute track renders in the time the encoder needs rather than three minutes.
 - The editor pauses playback, decodes the audio with `OfflineAudioContext`, snapshots the skin's live settings (volume, balance, EQ, visualiser style, shuffle, repeat, open windows) and hands everything to a module worker per file. Up to three workers run at once; more does not help hardware encoders.
-- Each worker unzips the `.wsz` it is given and blits the main, equalizer and playlist windows onto an `OffscreenCanvas` at the editor's zoom rule. Colour/image backgrounds encode with WebCodecs (H.264 + AAC) and mux to MP4 with `mp4-muxer`. None clears the frame to transparent and uses Mediabunny to encode VP9 with alpha plus Opus audio into WebM. VP9 uses quantizer zero to preserve fully transparent pixels. Black pixels inside the skin stay opaque. Fidelity is faithful, not pixel-identical: the marquee, digits, position bar, spectrum or oscilloscope, sliders and playlist highlight follow the audio; Webamp's exact visualiser smoothing is not reproduced.
+- Each worker unzips the `.wsz` it is given and blits the main, equalizer and playlist windows onto an `OffscreenCanvas` at the editor's zoom rule. Colour/image backgrounds encode with WebCodecs (H.264 + AAC) and mux to MP4 with `mediabunny`. None clears the frame to transparent and uses Mediabunny to encode VP9 with alpha plus Opus audio into WebM. VP9 uses quantizer zero to preserve fully transparent pixels. Black pixels inside the skin stay opaque. Fidelity is faithful, not pixel-identical: the marquee, digits, position bar, spectrum or oscilloscope, sliders and playlist highlight follow the audio; Webamp's exact visualiser smoothing is not reproduced.
 - Progress uses the Toaster's progress notice (§7): label "Exporting <name>", or "Exporting 2 of 5 · <title>" for multi-file runs, percent = frames done over frames total across every file, and a Cancel link. Each finished file downloads as `<name>.mp4` for colour/image or `<name>.webm` for None; the browser asks once before a multi-file run's second download.
 - Outcomes are plain notices: "Export was cancelled.", "That resolution isn't supported here. Try 1080p.", "Export failed.", and, without WebCodecs, "Export needs a recent Chrome, Edge or Safari." Unsupported transparent encoding reports "Transparent WebM export isn't supported here. Try Chrome or Edge, or choose a colour or image background." It never falls back to an opaque export.
 
@@ -292,7 +292,7 @@ src/
       skinThumb.ts       # reads main.bmp out of a .wsz for the picker
       export/
         audio.ts         # decodeTrack via OfflineAudioContext, transferables
-        export.worker.ts # renders + encodes one file: WebCodecs, mp4-muxer
+        export.worker.ts # renders + encodes one file: WebCodecs, mediabunny
         renderer/        # sprites (skin coordinates), skin (sheets from the .wsz), windows (main/eq/playlist), vis (FFT), compose
   features/
     templates/           # TemplateSection (skin picker with thumbnails)

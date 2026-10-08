@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
-import { ArrayBufferTarget, Muxer } from "mp4-muxer"
-import { AudioSample, AudioSampleSource, BufferTarget, CanvasSource, Output, Quality, WebMOutputFormat, canEncodeAudio, canEncodeVideo } from "mediabunny"
+import { AudioSample, AudioSampleSource, BufferTarget, CanvasSource, EncodedAudioPacketSource, EncodedPacket, EncodedVideoPacketSource, Mp4OutputFormat, Output, Quality, WebMOutputFormat, canEncodeAudio, canEncodeVideo } from "mediabunny"
 import { loadSkin } from "./renderer/skin"
 import { createRenderer, type Background, type Scene } from "./renderer/compose"
 import type { SkinState, TrackInfo } from "./renderer/windows"
@@ -152,15 +151,21 @@ const run = async (msg: StartMessage) => {
   const audioConfig: AudioEncoderConfig = { codec: "mp4a.40.2", sampleRate, numberOfChannels: 2, bitrate: 128_000 }
   if (!(await AudioEncoder.isConfigSupported(audioConfig)).supported) throw new Error("audio")
 
-  const muxer = new Muxer({
-    target: new ArrayBufferTarget(),
-    video: { codec: "avc", width, height },
-    audio: { codec: "aac", sampleRate, numberOfChannels: 2 },
-    fastStart: "in-memory",
-  })
+  const output = new Output({ format: new Mp4OutputFormat({ fastStart: "in-memory" }), target: new BufferTarget() })
+  const videoSource = new EncodedVideoPacketSource("avc")
+  const audioSource = new EncodedAudioPacketSource("aac")
+  output.addVideoTrack(videoSource, { frameRate: fps })
+  output.addAudioTrack(audioSource)
+  await output.start()
   let failure: Error | null = null
-  const video = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => (failure = e) })
-  const audio = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: (e) => (failure = e) })
+  // the encoder callbacks can't await, so adds chain onto one promise that finalize waits for
+  let pending = Promise.resolve()
+  const mux = (source: EncodedVideoPacketSource | EncodedAudioPacketSource, c: EncodedVideoChunk | EncodedAudioChunk, m?: EncodedVideoChunkMetadata | EncodedAudioChunkMetadata) => {
+    const packet = EncodedPacket.fromEncodedChunk(c)
+    pending = pending.then(() => source.add(packet, m as never)).catch((e: unknown) => { failure ??= e instanceof Error ? e : new Error(String(e)) })
+  }
+  const video = new VideoEncoder({ output: (c, m) => mux(videoSource, c, m), error: (e) => (failure = e) })
+  const audio = new AudioEncoder({ output: (c, m) => mux(audioSource, c, m), error: (e) => (failure = e) })
   video.configure(videoConfig)
   audio.configure(audioConfig)
 
@@ -195,13 +200,16 @@ const run = async (msg: StartMessage) => {
   if (cancelled) {
     video.close()
     audio.close()
+    await output.cancel()
     post({ type: "cancelled" })
     return
   }
 
   await Promise.all([video.flush(), audio.flush()])
-  muxer.finalize()
-  const buffer = (muxer.target as ArrayBufferTarget).buffer
+  await pending
+  if (failure) throw failure
+  await output.finalize()
+  const buffer = output.target.buffer!
   post({ type: "progress", frames })
   post({ type: "done", buffer, format: "mp4" }, [buffer])
 }
