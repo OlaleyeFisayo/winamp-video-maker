@@ -205,6 +205,16 @@ export const runExport = async (req: ExportRequest) => {
     results.clear()
     if (ordered.length === 1) {
       download(ordered[0].blob, ordered[0].name)
+      // share needs a fresh tap, and the export has long outlived the one that started it,
+      // so the share sheet hangs off a button. Only one video: social apps take no zips
+      const file = new File([ordered[0].blob], ordered[0].name, { type: ordered[0].blob.type })
+      if (navigator.canShare?.({ files: [file] })) {
+        toast.show("Video ready.", {
+          label: "Share",
+          // a dismissed share sheet rejects with AbortError; the file is downloaded either way
+          run: () => void navigator.share({ files: [file], title: file.name }).catch(() => {}),
+        })
+      }
     } else if (ordered.length > 1) {
       toast.setProgressLabel("Packaging zip")
       // numbered so the archive sorts, and so two tracks sharing a title stay distinct

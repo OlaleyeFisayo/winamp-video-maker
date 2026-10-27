@@ -49,6 +49,18 @@ export function Toaster() {
       {toasts.map((t) => (
         <div key={t.id} className={`${card} flex max-w-[calc(100vw-32px)] items-center gap-2 py-2 pl-4 pr-2`}>
           {t.message}
+          {t.action && (
+            <button
+              type="button"
+              onClick={() => {
+                t.action?.run()
+                dismiss(t.id)
+              }}
+              className="h-9 rounded-xs border border-rule px-3 text-[13px] leading-none text-paper hover:border-ash focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 md:h-7"
+            >
+              {t.action.label}
+            </button>
+          )}
           <IconButton aria-label="Dismiss" onClick={() => dismiss(t.id)} className="size-9 md:size-7">
             <IconX size={14} stroke={1.5} aria-hidden />
           </IconButton>
