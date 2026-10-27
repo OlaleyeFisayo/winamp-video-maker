@@ -61,7 +61,7 @@ The editor loads separately from the app shell; export code loads when you expor
 ## Contact
 
 - [TikTok — @semyelite](https://www.tiktok.com/@semyelite)
-- [Instagram — @omo.its.semy](https://www.instagram.com/omo.its.semy)
+- [Instagram — @semyelite](https://www.instagram.com/semyelite/)
 - [LinkedIn — Olaleye Fisayo](https://www.linkedin.com/in/olaleyefisayo/)
 - [GitHub — OlaleyeFisayo](https://github.com/OlaleyeFisayo)
 - [X — @semyelite](https://x.com/semyelite)

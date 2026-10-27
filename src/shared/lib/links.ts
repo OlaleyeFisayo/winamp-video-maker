@@ -9,7 +9,7 @@ import {
 /** The makers' profiles, shown in the About dialog. */
 export const LINKS = [
   { label: "TikTok", href: "https://www.tiktok.com/@semyelite", Icon: IconBrandTiktok },
-  { label: "Instagram", href: "https://www.instagram.com/omo.its.semy", Icon: IconBrandInstagram },
+  { label: "Instagram", href: "https://www.instagram.com/semyelite/", Icon: IconBrandInstagram },
   { label: "LinkedIn", href: "https://www.linkedin.com/in/olaleyefisayo/", Icon: IconBrandLinkedin },
   { label: "GitHub", href: "https://github.com/OlaleyeFisayo", Icon: IconBrandGithub },
   { label: "X", href: "https://x.com/semyelite", Icon: IconBrandX },
