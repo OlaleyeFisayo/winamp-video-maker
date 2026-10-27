@@ -3,7 +3,7 @@ import { useHelp } from "../../../shared/store/useHelp"
 import { LINKS, linkClass } from "../../../shared/lib/links"
 
 export function HelpDialog() {
-  const { open, setOpen } = useHelp()
+  const { open, setOpen, hideOnStart, setHideOnStart } = useHelp()
 
   return (
     <Dialog open={open} onClose={() => setOpen(false)} title="About">
@@ -27,6 +27,15 @@ export function HelpDialog() {
           </a>
         ))}
       </div>
+      <label className="flex cursor-pointer items-center gap-2 text-[15px] leading-normal text-ash">
+        <input
+          type="checkbox"
+          checked={hideOnStart}
+          onChange={(e) => setHideOnStart(e.target.checked)}
+          className="size-4 cursor-pointer accent-contrast"
+        />
+        Do not show this again
+      </label>
     </Dialog>
   )
 }

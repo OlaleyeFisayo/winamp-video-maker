@@ -11,7 +11,7 @@ import { DEFAULT_TEMPLATE } from "./templates"
  * Not the project's to reset: the theme, the skins the user collected, and how they like to
  * export. Starting a new video should not undo any of that.
  */
-const KEEP = [key("theme"), key("saved-skins"), key("export")]
+const KEEP = [key("theme"), key("saved-skins"), key("export"), key("help")]
 
 /**
  * Clears the current video — tracks, skin, frame, background and name — and leaves the user's
