@@ -1,5 +1,5 @@
 import { useAudio } from "../../../shared/store/useAudio"
-import { useCanvas } from "../../../shared/store/useCanvas"
+import { blurRadius, useCanvas } from "../../../shared/store/useCanvas"
 import { useExport, type ExportRequest } from "../../../shared/store/useExport"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { DEFAULT_NAME, useProject } from "../../../shared/store/useProject"
@@ -85,7 +85,11 @@ export const runExport = async (req: ExportRequest) => {
     }
 
     const canvas = useCanvas.getState()
-    const image = canvas.mode === "image" && canvas.image ? await createImageBitmap(await (await fetch(canvas.image)).blob()) : null
+    // ponytail: blur draws the skin's static thumbnail, so it does not move with the visualiser;
+    // re-blur the live stack per frame in compose.ts if that is ever wanted (a blur per frame at 4K)
+    const template = useTemplate.getState()
+    const source = canvas.mode === "image" ? canvas.image : canvas.mode === "blur" ? template.thumbs[template.id] : null
+    const image = source ? await createImageBitmap(await (await fetch(source)).blob()) : null
     const { width, height } = exportSize(frameSize(useFrame.getState()), req.resolution)
     const skin = snapshotSkinState()
 
@@ -127,7 +131,13 @@ export const runExport = async (req: ExportRequest) => {
           height,
           fps: req.fps,
           scale: canvas.scale,
-          background: { mode: canvas.mode, color: canvas.color, image, fit: canvas.fit },
+          background: {
+            mode: canvas.mode,
+            color: canvas.color,
+            image,
+            fit: canvas.mode === "blur" ? "cover" : canvas.fit,
+            blur: blurRadius(canvas.blur, width, height),
+          },
           skin,
           tracks: tracks.map((t) => ({ title: t.title, duration: t.duration, kbps: t.kbps, sampleRate: t.sampleRate, channels: t.channels })),
           playlist: showPlaylist

@@ -18,6 +18,7 @@ export type Snapshot = {
     mode: ReturnType<typeof useCanvas.getState>["mode"]
     color: string
     fit: ReturnType<typeof useCanvas.getState>["fit"]
+    blur: number
     image: string | null
     imageName: string | null
     imageFile: Blob | null

@@ -6,6 +6,7 @@ import { useCanvas, type BackgroundMode, type Fit } from "../../../shared/store/
 const MODES = [
   { value: "color", label: "Colour" },
   { value: "image", label: "Image" },
+  { value: "blur", label: "Blur" },
   { value: "transparent", label: "None" },
 ] as const
 
@@ -43,6 +44,26 @@ function HexField({ value, onCommit }: { value: string; onCommit: (hex: string) 
   )
 }
 
+function BlurSlider() {
+  const { blur, setBlur } = useCanvas()
+  const percent = Math.round(blur * 100)
+  return (
+    <div className="flex items-center gap-3">
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        aria-label="Background blur"
+        value={percent}
+        onChange={(e) => setBlur(Number(e.target.value) / 100)}
+        className="h-2 flex-1 cursor-pointer accent-contrast md:h-1"
+      />
+      <span className="w-10 text-right font-mono text-[13px] text-ash">{percent}%</span>
+    </div>
+  )
+}
+
 export function BackgroundSection() {
   const { mode, color, image, imageName, fit, setMode, setColor, setImage, setFit } = useCanvas()
   const [rejected, setRejected] = useState(false)
@@ -74,6 +95,7 @@ export function BackgroundSection() {
               </IconButton>
             </div>
             <Segmented options={FITS} value={fit} onChange={(v: Fit) => setFit(v)} aria-label="Image fit" />
+            <BlurSlider />
           </>
         ) : (
           <Dropzone
@@ -89,6 +111,12 @@ export function BackgroundSection() {
             Drop an image here.
           </Dropzone>
         ))}
+      {mode === "blur" && (
+        <>
+          <BlurSlider />
+          <p className="text-[15px] leading-normal text-ash">Uses a blurred copy of the skin.</p>
+        </>
+      )}
       {mode === "transparent" && (
         <p className="text-[15px] leading-normal text-ash">Exports as a transparent WebM video.</p>
       )}

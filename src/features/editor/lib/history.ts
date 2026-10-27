@@ -21,7 +21,7 @@ const DEBOUNCE = 300
 
 const take = (): Snapshot => {
   const { ratio, custom } = useFrame.getState()
-  const { scale, mode, color, fit, image, imageName, imageFile } = useCanvas.getState()
+  const { scale, mode, color, fit, blur, image, imageName, imageFile } = useCanvas.getState()
   const trims = useAudio.getState().trims
   const playlist: Row[] = []
   for (const t of getWebamp().getPlaylistTracks()) {
@@ -33,7 +33,7 @@ const take = (): Snapshot => {
   return {
     template: useTemplate.getState().id,
     frame: { ratio, custom },
-    canvas: { scale, mode, color, fit, image, imageName, imageFile },
+    canvas: { scale, mode, color, fit, blur, image, imageName, imageFile },
     playlist,
   }
 }
@@ -114,8 +114,8 @@ const apply = (s: Snapshot) =>
   quiet(() => {
     useTemplate.getState().setId(s.template)
     useFrame.setState(s.frame)
-    const { scale, mode, color, fit, imageFile, imageName } = s.canvas
-    useCanvas.setState({ scale, mode, color, fit })
+    const { scale, mode, color, fit, blur, imageFile, imageName } = s.canvas
+    useCanvas.setState({ scale, mode, color, fit, blur })
     useCanvas.getState().setImage(imageFile, imageName ?? undefined)
     applyPlaylist(s.playlist)
     // a fresh take: the image and any re-added rows now have new blob URLs

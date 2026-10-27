@@ -40,7 +40,7 @@ export const resetApp = async (clearPlaylist?: () => void) => {
   useAudio.setState({ tracks: [], current: null, status: "STOPPED", time: 0, commands: [] })
   useProject.setState({ name: "" })
   useTemplate.setState({ id: DEFAULT_TEMPLATE.id })
-  useCanvas.setState({ scale: 0.5, mode: "color", color: "#FFFFFF", image: null, imageName: null, fit: "cover" })
+  useCanvas.setState({ scale: 0.5, mode: "color", color: "#FFFFFF", image: null, imageName: null, fit: "cover", blur: 0.5 })
   useFrame.setState({ ratio: "16:9", custom: { width: 1920, height: 1080 } })
 
   // 5. Only now drop the persisted keys: persist writes on every setState above, so clearing

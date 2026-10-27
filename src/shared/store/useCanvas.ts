@@ -9,8 +9,14 @@ let imageRevision = 0
 /** Key the background image lives under in the session file store. */
 export const IMAGE_KEY = "background"
 
-export type BackgroundMode = "color" | "image" | "transparent"
+export type BackgroundMode = "color" | "image" | "blur" | "transparent"
 export type Fit = "cover" | "contain"
+
+/**
+ * Blur strength (0–1) to pixels for a frame of this size. Relative to the frame, so the
+ * editor's small preview and a 4K export blur by the same proportion.
+ */
+export const blurRadius = (blur: number, width: number, height: number) => blur * 0.05 * Math.min(width, height)
 
 type Canvas = {
   /** Fraction of the frame height the skin stack occupies. */
@@ -25,11 +31,14 @@ type Canvas = {
   /** The bytes behind `image`, so undo can bring a replaced image back. Not persisted. */
   imageFile: Blob | null
   fit: Fit
+  /** Blur strength 0–1, shared by the blur and image backgrounds. */
+  blur: number
   setScale: (scale: number) => void
   setMode: (mode: BackgroundMode) => void
   setColor: (hex: string) => void
   setImage: (file: Blob | null, name?: string) => void
   setFit: (fit: Fit) => void
+  setBlur: (blur: number) => void
 }
 
 export const useCanvas = create<Canvas>()(
@@ -42,6 +51,7 @@ export const useCanvas = create<Canvas>()(
       imageName: null,
       imageFile: null,
       fit: "cover",
+      blur: 0.5,
       setScale: (scale) => set({ scale: Math.min(1, Math.max(0.1, scale)) }),
       setMode: (mode) => set({ mode }),
       setColor: (hex) => {
@@ -62,13 +72,14 @@ export const useCanvas = create<Canvas>()(
         })
       },
       setFit: (fit) => set({ fit }),
+      setBlur: (blur) => set({ blur: Math.min(1, Math.max(0, blur)) }),
     }),
     {
       name: key("canvas"),
       storage: createJSONStorage(() => lazyStorage),
       // the image is bytes, not JSON: it lives in the session file store and comes back
       // through restoreBackground below
-      partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit }),
+      partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit, blur: s.blur }),
     },
   ),
 )

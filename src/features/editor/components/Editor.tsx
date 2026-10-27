@@ -3,7 +3,7 @@ import { IconMinimize } from "@tabler/icons-react"
 import { IconButton } from "../../../shared/ui"
 import Webamp from "webamp"
 import { effectiveDuration, useAudio, type Track } from "../../../shared/store/useAudio"
-import { useCanvas } from "../../../shared/store/useCanvas"
+import { blurRadius, useCanvas } from "../../../shared/store/useCanvas"
 import { frameSize, useFrame } from "../../../shared/store/useFrame"
 import { useElementSize } from "../../../shared/lib/useElementSize"
 import { useTemplate } from "../../../shared/store/useTemplate"
@@ -119,7 +119,9 @@ export function Editor() {
   const color = useCanvas((s) => s.color)
   const image = useCanvas((s) => s.image)
   const fit = useCanvas((s) => s.fit)
+  const blur = useCanvas((s) => s.blur)
   const templateId = useTemplate((s) => s.id)
+  const skinThumb = useTemplate((s) => s.thumbs[s.id])
   const preview = usePreview((s) => s.active)
   const frameSizePx = useElementSize(frame, supported)
   // zoom, not transform: zoom changes layout geometry too, so Webamp's slider drags stay accurate
@@ -383,18 +385,30 @@ export function Editor() {
     () => ({
       width: `min(100cqw, ${width / height} * 100cqh)`,
       aspectRatio: `${width} / ${height}`,
-      ...(mode === "transparent"
-        ? {}
-        : mode === "image" && image
-          ? {
-              backgroundImage: `url(${image})`,
-              backgroundSize: fit,
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-            }
-          : { background: color }),
+      ...(mode === "color" ? { background: color } : {}),
     }),
-    [width, height, mode, image, fit, color],
+    [width, height, mode, color],
+  )
+
+  // image and blur paint into their own layer: a filter on the frame would blur the skin too
+  const layerImage = mode === "image" ? image : mode === "blur" ? skinThumb : null
+  const layerFit = mode === "blur" ? "cover" : fit
+  const radius = blurRadius(blur, frameSizePx.width, frameSizePx.height)
+  // a blurred edge fades to nothing, so a cover layer overscans by twice the radius; the export does the same
+  const overscan = layerFit === "cover" ? -2 * radius : 0
+  const layerStyle = useMemo(
+    () =>
+      layerImage
+        ? {
+            inset: overscan,
+            backgroundImage: `url(${layerImage})`,
+            backgroundSize: layerFit,
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            filter: radius > 0 ? `blur(${radius}px)` : undefined,
+          }
+        : undefined,
+    [layerImage, layerFit, overscan, radius],
   )
 
   if (!supported) {
@@ -429,7 +443,17 @@ export function Editor() {
     >
       {/* container units size the frame to the largest box of the ratio that fits */}
       <div className="grid min-h-0 w-full place-items-center @container-size">
-        <div ref={frame} className={cn("relative", mode === "transparent" && "checkerboard")} style={frameStyle}>
+        <div
+          ref={frame}
+          className={cn(
+            "relative",
+            mode === "transparent" && "checkerboard",
+            // the export fills black under an image too
+            (mode === "image" || mode === "blur") && "overflow-hidden bg-letterbox",
+          )}
+          style={frameStyle}
+        >
+          {layerStyle && <div aria-hidden className="absolute" style={layerStyle} />}
           {/* preview is a look at the video, not a player: nothing in the skin responds */}
           <div
             className={cn(

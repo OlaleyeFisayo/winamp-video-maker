@@ -4,10 +4,13 @@ import { drawEq, drawMain, drawPlaylist, type SkinState, type TrackInfo } from "
 import { oscilloscope, spectrum } from "./vis"
 
 export type Background = {
-  mode: "color" | "image" | "transparent"
+  mode: "color" | "image" | "blur" | "transparent"
   color: string
+  /** The picture behind the skin: the user's image, or the skin's thumbnail in blur mode. */
   image: ImageBitmap | null
   fit: "cover" | "contain"
+  /** Blur radius in output pixels; 0 is sharp. */
+  blur: number
 }
 
 export type SceneTrack = TrackInfo & { mono: Float32Array; sampleRate: number }
@@ -41,23 +44,35 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
   const ox = Math.round((scene.width - outW) / 2)
   const oy = Math.round((scene.height - outH) / 2)
 
-  const drawBackground = (ctx: OffscreenCanvasRenderingContext2D) => {
+  // the background never changes, so it is painted once here — a blur per frame at 4K is not free
+  const bg = new OffscreenCanvas(scene.width, scene.height)
+  {
     const b = scene.background
-    if (b.mode === "transparent") {
-      ctx.clearRect(0, 0, scene.width, scene.height)
-      return
+    const bctx = bg.getContext("2d")!
+    if (b.mode !== "transparent") {
+      bctx.fillStyle = b.mode === "color" ? b.color : "#000000"
+      bctx.fillRect(0, 0, scene.width, scene.height)
     }
-    ctx.fillStyle = b.mode === "color" ? b.color : "#000000"
-    ctx.fillRect(0, 0, scene.width, scene.height)
-    if (b.mode === "image" && b.image) {
+    if ((b.mode === "image" || b.mode === "blur") && b.image) {
       const img = b.image
+      // a blurred edge fades to nothing, so a cover image overscans by twice the radius, as the preview does
+      const pad = b.fit === "cover" ? 2 * b.blur : 0
+      const boxW = scene.width + 2 * pad, boxH = scene.height + 2 * pad
       const scale = b.fit === "cover"
-        ? Math.max(scene.width / img.width, scene.height / img.height)
-        : Math.min(scene.width / img.width, scene.height / img.height)
+        ? Math.max(boxW / img.width, boxH / img.height)
+        : Math.min(boxW / img.width, boxH / img.height)
       const w = img.width * scale, h = img.height * scale
-      ctx.imageSmoothingEnabled = true
-      ctx.drawImage(img, (scene.width - w) / 2, (scene.height - h) / 2, w, h)
+      bctx.imageSmoothingEnabled = true
+      if (b.blur > 0) bctx.filter = `blur(${b.blur}px)`
+      bctx.drawImage(img, (scene.width - w) / 2, (scene.height - h) / 2, w, h)
     }
+  }
+
+  const drawBackground = (ctx: OffscreenCanvasRenderingContext2D) => {
+    // transparent frames must start clear; copy mode puts the cached pixels down as they are
+    ctx.globalCompositeOperation = "copy"
+    ctx.drawImage(bg, 0, 0)
+    ctx.globalCompositeOperation = "source-over"
   }
 
   return {
