@@ -153,6 +153,8 @@ export function TracksSection() {
     <PanelSection
       title="Tracks"
       collapsible
+      // <details> wraps its children in ::details-content, which must flex too or the list never shrinks
+      className="md:open:min-h-0 md:open:flex-1 md:open:details-content:flex md:open:details-content:min-h-0 md:open:details-content:flex-1 md:open:details-content:flex-col md:open:details-content:gap-2"
       action={
         !empty && (
           <IconButton aria-label="Add tracks" className="size-9 md:size-7" onClick={() => input.current?.click()}>
@@ -184,8 +186,8 @@ export function TracksSection() {
           Drop MP3 or WAV files here.
         </Dropzone>
       ) : (
-        // 5 rows plus 4 gaps of 8px; more than that scrolls. Rows are 44px on touch, 36px from md
-        <ol ref={list} className="flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-53">
+        // mobile: 5 rows of 44px plus 4 gaps of 8px, then scrolls. From md: fills the sidebar, then scrolls
+        <ol ref={list} className="flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1">
           {tracks.map((t, i) => (
             <Row key={t.url} track={t} index={i} active={i === current} count={tracks.length} draggingRef={dragging} />
           ))}

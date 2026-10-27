@@ -39,7 +39,7 @@ function HexField({ value, onCommit }: { value: string; onCommit: (hex: string) 
           e.currentTarget.blur()
         }
       }}
-      className="h-9 flex-1 rounded-sm border border-rule bg-graphite px-3 font-mono text-[13px] uppercase leading-[1.3] text-paper transition-colors duration-100 hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
+      className="h-9 min-w-0 flex-1 rounded-sm border border-rule bg-graphite px-3 font-mono text-[13px] uppercase leading-[1.3] text-paper transition-colors duration-100 hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
     />
   )
 }
