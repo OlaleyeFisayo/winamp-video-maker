@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { IconGripVertical, IconMusic, IconPlayerPlay, IconPlus, IconX } from "@tabler/icons-react"
 import { Dropzone, IconButton, PanelSection } from "../../../shared/ui"
 import { useAudio, type Track } from "../../../shared/store/useAudio"
@@ -9,6 +9,10 @@ import { cn } from "../../../shared/lib/cn"
 // ponytail: phones often leave file.type empty, so match by extension too
 const ACCEPT = "audio/*,.wav,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac"
 const SKIPPED = "Some files weren't audio and were skipped. Use MP3, WAV, OGG or FLAC."
+/** How close to the list's top or bottom, in px, a dragged row starts scrolling it. */
+const EDGE = 32
+
+type Drag = { from: number; to: number }
 
 type NameProps = {
   title: string
@@ -84,17 +88,15 @@ type RowProps = {
   track: Track
   /** Index in the store; play, rename, remove and keyboard moves use it. */
   index: number
-  /** Slot in the drag preview, which is what the number shows and where a hover drops. */
+  /** Slot in the drag preview, which is what the number shows. */
   pos: number
   active: boolean
   count: number
   placeholder: boolean
-  onGrab: (index: number) => void
-  /** Set only while a row is being dragged. */
-  onHover?: (pos: number) => void
+  onGrab: (index: number, e: ReactPointerEvent<HTMLElement>) => void
 }
 
-function Row({ track: t, index: i, pos, active, count, placeholder, onGrab, onHover }: RowProps) {
+function Row({ track: t, index: i, pos, active, count, placeholder, onGrab }: RowProps) {
   const enqueue = useAudio((s) => s.enqueue)
   const [editing, setEditing] = useState(false)
   const move = (to: number) => {
@@ -104,12 +106,6 @@ function Row({ track: t, index: i, pos, active, count, placeholder, onGrab, onHo
   return (
     <li
       data-active={active || undefined}
-      onDragOver={(e) => {
-        if (!onHover) return
-        // without preventDefault the browser refuses the drop
-        e.preventDefault()
-        onHover(pos)
-      }}
       className={cn(
         "flex shrink-0 gap-1 rounded-sm border bg-graphite px-1 transition-colors duration-100",
         // renaming grows the row so the whole name wraps into view
@@ -118,22 +114,16 @@ function Row({ track: t, index: i, pos, active, count, placeholder, onGrab, onHo
         placeholder ? "border-dashed border-ash *:invisible" : active ? "border-contrast" : "border-rule",
       )}
     >
-      {/* the handle drags, not the row: a draggable ancestor breaks text selection in the name input */}
+      {/* the handle drags, not the row, so the rest of the row still scrolls the list on touch.
+          Pointer events, not HTML5 drag and drop: phones barely fire the latter from a finger */}
       <button
         type="button"
-        draggable={!editing}
         aria-label={`Reorder ${t.title}`}
-        onDragStart={(e) => {
-          // the handle starts the drag, but the whole row is what follows the pointer
-          const row = e.currentTarget.closest("li")
-          if (row) {
-            const box = row.getBoundingClientRect()
-            e.dataTransfer.setDragImage(row, e.clientX - box.left, e.clientY - box.top)
-          }
-          e.dataTransfer.effectAllowed = "move"
-          // Firefox will not start a drag without data
-          e.dataTransfer.setData("text/plain", "")
-          onGrab(i)
+        onPointerDown={(e) => {
+          if (editing || e.button !== 0) return
+          // no focus, text selection or compatibility mouse events from the press
+          e.preventDefault()
+          onGrab(i, e)
         }}
         onKeyDown={(e) => {
           const dir = e.altKey ? (e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0) : 0
@@ -141,7 +131,7 @@ function Row({ track: t, index: i, pos, active, count, placeholder, onGrab, onHo
           e.preventDefault()
           move(i + dir)
         }}
-        className="flex size-9 shrink-0 cursor-grab items-center justify-center rounded-xs text-ash hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 active:cursor-grabbing md:size-6"
+        className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-xs text-ash hover:text-paper focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 active:cursor-grabbing md:size-6"
       >
         <IconGripVertical size={14} stroke={1.5} aria-hidden />
       </button>
@@ -180,7 +170,17 @@ export function TracksSection() {
   const enqueue = useAudio((s) => s.enqueue)
   const input = useRef<HTMLInputElement>(null)
   const list = useRef<HTMLOListElement>(null)
-  const [drag, setDrag] = useState<{ from: number; to: number } | null>(null)
+  const [drag, setDragState] = useState<Drag | null>(null)
+  // mirrored for the window listeners, which outlive the render that attached them
+  const dragRef = useRef<Drag | null>(null)
+  const setDrag = (d: Drag | null) => {
+    dragRef.current = d
+    setDragState(d)
+  }
+  /** Where the grabbed row sat when picked up; the ghost starts there and then follows the pointer. */
+  const [grabBox, setGrabBox] = useState<{ left: number; top: number; width: number } | null>(null)
+  const pointer = useRef({ y: 0, grab: 0 })
+  const ghost = useRef<HTMLDivElement>(null)
   const [skipped, setSkipped] = useState(false)
   const dragging = drag !== null
 
@@ -188,19 +188,71 @@ export function TracksSection() {
     list.current?.querySelector("li[data-active]")?.scrollIntoView({ block: "nearest" })
   }, [current])
 
-  // on window, not the handle: Esc or a drop outside the list still ends it, and the
-  // handle's own dragend can be lost when the preview reorder moves its row in the DOM
   useEffect(() => {
     if (!dragging) return
-    const end = () => setDrag(null)
-    window.addEventListener("dragend", end)
-    return () => window.removeEventListener("dragend", end)
+    const ol = list.current
+    // rows are one fixed height, so the slot under the ghost is plain arithmetic
+    const retarget = () => {
+      const d = dragRef.current
+      const first = ol?.querySelector("li")
+      if (!d || !ol || !first) return
+      const step = first.offsetHeight + parseFloat(getComputedStyle(ol).rowGap || "0")
+      const top = pointer.current.y - pointer.current.grab - first.getBoundingClientRect().top
+      const to = Math.min(ol.children.length - 1, Math.max(0, Math.round(top / step)))
+      if (to !== d.to) setDrag({ ...d, to })
+    }
+    // window, not the handle: the preview reorder moves the handle's row in the DOM, which
+    // drops pointer capture, and the drag must still end wherever the pointer is let go
+    const move = (e: PointerEvent) => {
+      pointer.current.y = e.clientY
+      if (ghost.current) ghost.current.style.top = `${e.clientY - pointer.current.grab}px`
+      retarget()
+    }
+    const end = (commit: boolean) => {
+      const d = dragRef.current
+      if (commit && d && d.from !== d.to) enqueue({ type: "move", from: d.from, to: d.to })
+      setDrag(null)
+      setGrabBox(null)
+    }
+    const up = () => end(true)
+    const cancel = () => end(false)
+    const key = (e: KeyboardEvent) => e.key === "Escape" && cancel()
+    // a held finger near the list's edge keeps scrolling it, faster the closer it gets;
+    // the mobile list shows five rows, so this is how a track reaches the sixth
+    let raf = 0
+    const edge = () => {
+      raf = requestAnimationFrame(edge)
+      if (!ol) return
+      const box = ol.getBoundingClientRect()
+      const y = pointer.current.y
+      const near = y < box.top + EDGE ? y - (box.top + EDGE) : y > box.bottom - EDGE ? y - (box.bottom - EDGE) : 0
+      if (!near) return
+      ol.scrollTop += Math.max(-1, Math.min(1, near / EDGE)) * 8
+      retarget()
+    }
+    raf = requestAnimationFrame(edge)
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+    window.addEventListener("pointercancel", cancel)
+    window.addEventListener("keydown", key)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+      window.removeEventListener("pointercancel", cancel)
+      window.removeEventListener("keydown", key)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- attach once per drag; it reads live values through refs
   }, [dragging])
 
-  // a frame late: turning the row into a placeholder during dragstart makes Chrome
-  // cancel the drag or snapshot the empty slot as the drag image
-  const onGrab = (i: number) => requestAnimationFrame(() => setDrag({ from: i, to: i }))
-  const onHover = (pos: number) => setDrag((d) => (d && d.to !== pos ? { ...d, to: pos } : d))
+  const onGrab = (i: number, e: ReactPointerEvent<HTMLElement>) => {
+    const row = e.currentTarget.closest("li")
+    if (!row) return
+    const box = row.getBoundingClientRect()
+    pointer.current = { y: e.clientY, grab: e.clientY - box.top }
+    setGrabBox({ left: box.left, top: box.top, width: box.width })
+    setDrag({ from: i, to: i })
+  }
 
   // the order the list would have if the drag dropped now
   const order = tracks.map((t, i) => ({ t, i }))
@@ -262,15 +314,11 @@ export function TracksSection() {
         // mobile: 5 rows of 44px plus 4 gaps of 8px, then scrolls. From md: fills the sidebar, then scrolls
         <ol
           ref={list}
-          // the gaps between rows accept the drop too
-          onDragOver={(e) => drag && e.preventDefault()}
-          onDrop={(e) => {
-            if (!drag) return
-            e.preventDefault()
-            if (drag.from !== drag.to) enqueue({ type: "move", from: drag.from, to: drag.to })
-            setDrag(null)
-          }}
-          className="flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1"
+          className={cn(
+            "flex max-h-63 flex-col gap-2 overflow-y-auto pr-1 md:max-h-none md:min-h-0 md:flex-1",
+            // a long press mid-drag must not select text or raise the iOS callout
+            dragging && "select-none",
+          )}
         >
           {order.map(({ t, i }, pos) => (
             <Row
@@ -282,10 +330,27 @@ export function TracksSection() {
               count={tracks.length}
               placeholder={i === drag?.from}
               onGrab={onGrab}
-              onHover={drag ? onHover : undefined}
             />
           ))}
         </ol>
+      )}
+      {drag && grabBox && tracks[drag.from] && (
+        // the row under the pointer; the placeholder in the list marks where it will land
+        <div
+          ref={ghost}
+          aria-hidden
+          className="pointer-events-none fixed z-50 flex h-11 items-center gap-1 rounded-sm border border-paper bg-graphite px-1 shadow-lg select-none md:h-9"
+          style={{ left: grabBox.left, top: grabBox.top, width: grabBox.width }}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center text-paper md:size-6">
+            <IconGripVertical size={14} stroke={1.5} />
+          </span>
+          <span className="flex size-9 shrink-0 items-center justify-center font-mono text-[13px] leading-none text-ash md:size-6">
+            {drag.to + 1}
+          </span>
+          <span className="min-w-0 flex-1 truncate px-1 text-[15px] leading-[1.3] text-paper">{tracks[drag.from].title}</span>
+          <span className="shrink-0 pr-2 font-mono text-[13px] leading-none text-ash">{formatTime(tracks[drag.from].duration)}</span>
+        </div>
       )}
       {skipped && !empty && <p className="text-[15px] leading-normal text-paper underline">{SKIPPED}</p>}
     </PanelSection>
