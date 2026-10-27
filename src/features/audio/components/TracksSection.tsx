@@ -75,7 +75,7 @@ function TrackName({ title, editing, onEdit, onRename }: NameProps) {
           e.currentTarget.blur()
         }
       }}
-      className="min-h-7 min-w-0 flex-1 resize-none overflow-hidden break-words rounded-xs border border-ash bg-transparent px-1 py-1 text-[15px] leading-[1.3] text-paper focus:outline-none"
+      className="min-h-7 min-w-0 flex-1 resize-none overflow-hidden wrap-break-word rounded-xs border border-ash bg-transparent px-1 py-1 text-[15px] leading-[1.3] text-paper focus:outline-none"
     />
   )
 }
