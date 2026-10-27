@@ -24,6 +24,7 @@ import { clearHistory, startHistory } from "../lib/history"
 import { useToast } from "../../../shared/store/useToast"
 import { Timeline } from "./Timeline"
 import { Transport } from "./Transport"
+import { LiveBlur } from "./LiveBlur"
 
 const supported = Webamp.browserIsSupported()
 
@@ -121,7 +122,6 @@ export function Editor() {
   const fit = useCanvas((s) => s.fit)
   const blur = useCanvas((s) => s.blur)
   const templateId = useTemplate((s) => s.id)
-  const skinThumb = useTemplate((s) => s.thumbs[s.id])
   const preview = usePreview((s) => s.active)
   const frameSizePx = useElementSize(frame, supported)
   // zoom, not transform: zoom changes layout geometry too, so Webamp's slider drags stay accurate
@@ -391,24 +391,23 @@ export function Editor() {
   )
 
   // image and blur paint into their own layer: a filter on the frame would blur the skin too
-  const layerImage = mode === "image" ? image : mode === "blur" ? skinThumb : null
-  const layerFit = mode === "blur" ? "cover" : fit
+  const layerImage = mode === "image" ? image : null
   const radius = blurRadius(blur, frameSizePx.width, frameSizePx.height)
   // a blurred edge fades to nothing, so a cover layer overscans by twice the radius; the export does the same
-  const overscan = layerFit === "cover" ? -2 * radius : 0
+  const overscan = fit === "cover" ? -2 * radius : 0
   const layerStyle = useMemo(
     () =>
       layerImage
         ? {
             inset: overscan,
             backgroundImage: `url(${layerImage})`,
-            backgroundSize: layerFit,
+            backgroundSize: fit,
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
             filter: radius > 0 ? `blur(${radius}px)` : undefined,
           }
         : undefined,
-    [layerImage, layerFit, overscan, radius],
+    [layerImage, fit, overscan, radius],
   )
 
   if (!supported) {
@@ -454,6 +453,7 @@ export function Editor() {
           style={frameStyle}
         >
           {layerStyle && <div aria-hidden className="absolute" style={layerStyle} />}
+          {mode === "blur" && <LiveBlur radius={radius} />}
           {/* preview is a look at the video, not a player: nothing in the skin responds */}
           <div
             className={cn(

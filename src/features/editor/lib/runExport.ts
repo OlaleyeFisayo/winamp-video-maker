@@ -85,11 +85,8 @@ export const runExport = async (req: ExportRequest) => {
     }
 
     const canvas = useCanvas.getState()
-    // ponytail: blur draws the skin's static thumbnail, so it does not move with the visualiser;
-    // re-blur the live stack per frame in compose.ts if that is ever wanted (a blur per frame at 4K)
-    const template = useTemplate.getState()
-    const source = canvas.mode === "image" ? canvas.image : canvas.mode === "blur" ? template.thumbs[template.id] : null
-    const image = source ? await createImageBitmap(await (await fetch(source)).blob()) : null
+    // blur mode needs no picture: compose.ts blurs the live skin stack every frame
+    const image = canvas.mode === "image" && canvas.image ? await createImageBitmap(await (await fetch(canvas.image)).blob()) : null
     const { width, height } = exportSize(frameSize(useFrame.getState()), req.resolution)
     const skin = snapshotSkinState()
 
