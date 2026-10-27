@@ -2,6 +2,7 @@ import type { Skin } from "./skin"
 import { WIN_H, WIN_W } from "./sprites"
 import { drawEq, drawMain, drawPlaylist, type SkinState, type TrackInfo } from "./windows"
 import { oscilloscope, spectrum } from "./vis"
+import { place, type Position } from "../../position"
 
 export type Background = {
   mode: "color" | "image" | "blur" | "transparent"
@@ -20,6 +21,7 @@ export type Scene = {
   height: number
   /** Fraction of the frame height the skin stack occupies, as in the editor. */
   scale: number
+  position: Position
   background: Background
   skin: SkinState
   tracks: SceneTrack[]
@@ -73,8 +75,9 @@ export const createRenderer = (skin: Skin, scene: Scene) => {
   const zoom = Math.min((scene.height * scene.scale) / (WIN_H * 3), scene.width / WIN_W)
   const outW = Math.round(WIN_W * zoom)
   const outH = Math.round(stackH * zoom)
-  const ox = Math.round((scene.width - outW) / 2)
-  const oy = Math.round((scene.height - outH) / 2)
+  const at = place(scene.position, scene.width, scene.height, outW, outH)
+  const ox = Math.round(at.x)
+  const oy = Math.round(at.y)
 
   // the background never changes, so it is painted once here — a blur per frame at 4K is not free
   const bg = new OffscreenCanvas(scene.width, scene.height)

@@ -128,6 +128,7 @@ export const runExport = async (req: ExportRequest) => {
           height,
           fps: req.fps,
           scale: canvas.scale,
+          position: canvas.position,
           background: {
             mode: canvas.mode,
             color: canvas.color,

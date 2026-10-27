@@ -104,3 +104,9 @@
     background-position: 0 0;
   }
 }
+
+/* Webamp's title bars move the whole player in the editor: no page scroll under a finger on one */
+#webamp .draggable {
+  touch-action: none;
+  cursor: move;
+}

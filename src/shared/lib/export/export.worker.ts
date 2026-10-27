@@ -3,6 +3,7 @@ import { AudioSample, AudioSampleSource, BufferTarget, CanvasSource, EncodedAudi
 import { loadSkin } from "./renderer/skin"
 import { createRenderer, type Background, type Scene } from "./renderer/compose"
 import type { SkinState, TrackInfo } from "./renderer/windows"
+import type { Position } from "../position"
 
 export type WorkerTrack = {
   title: string
@@ -19,6 +20,7 @@ export type StartMessage = {
   height: number
   fps: number
   scale: number
+  position: Position
   background: Background
   skin: SkinState
   /** The audio to encode. Drives the video's length and the visualiser. */
@@ -124,7 +126,7 @@ const run = async (msg: StartMessage) => {
     return { title: t.title, duration: t.duration, kbps: t.kbps, khz: t.sampleRate / 1000, channels: t.channels.length, mono, sampleRate: t.sampleRate }
   })
   // `tracks` alone drives length and timing below; `playlist` only changes what is drawn
-  const scene: Scene = { width, height, scale: msg.scale, background: msg.background, skin: msg.skin, tracks, playlist: msg.playlist }
+  const scene: Scene = { width, height, scale: msg.scale, position: msg.position, background: msg.background, skin: msg.skin, tracks, playlist: msg.playlist }
   const renderer = createRenderer(skin, scene)
   const total = tracks.reduce((a, t) => a + t.duration, 0)
   const canvas = new OffscreenCanvas(width, height)

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { PanelSection } from "../../../shared/ui"
 import { useCanvas } from "../../../shared/store/useCanvas"
+import { CENTRE } from "../../../shared/lib/position"
 
 const field =
   "h-9 w-16 rounded-sm border border-rule bg-graphite px-2 text-right font-mono text-[13px] leading-[1.3] text-paper transition-colors duration-100 hover:border-ash focus:border-paper focus:outline-none focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2"
@@ -33,11 +34,12 @@ function PercentField({ value, onCommit }: { value: number; onCommit: (n: number
 }
 
 export function SizeSection() {
-  const { scale, setScale } = useCanvas()
+  const { scale, setScale, position, setPosition } = useCanvas()
+  const centred = position.x === CENTRE.x && position.y === CENTRE.y
   const percent = Math.round(scale * 100)
 
   return (
-    <PanelSection title="Size" collapsible>
+    <PanelSection title="Size & position" collapsible>
       <div className="flex items-center gap-3">
         <input
           type="range"
@@ -51,6 +53,15 @@ export function SizeSection() {
         />
         <PercentField key={percent} value={percent} onCommit={(n) => setScale(n / 100)} />
       </div>
+      <p className="text-[15px] leading-normal text-ash">Drag the player by its title bar to move it.</p>
+      <button
+        type="button"
+        disabled={centred}
+        onClick={() => setPosition(CENTRE)}
+        className="h-11 w-full rounded-sm border border-rule bg-graphite px-3 font-mono text-[12px] leading-none text-paper transition-colors duration-100 hover:border-ash focus-visible:outline-2 focus-visible:outline-contrast focus-visible:outline-offset-2 disabled:cursor-default disabled:text-ash disabled:hover:border-rule md:h-7"
+      >
+        Reset to centre
+      </button>
     </PanelSection>
   )
 }

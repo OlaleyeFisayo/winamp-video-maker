@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { key, lazyStorage } from "../lib/storageKeys"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { deleteFile, getFile, putFile } from "../lib/sessionFiles"
+import { CENTRE, clampPosition, type Position } from "../lib/position"
 
 const HEX = /^#[0-9a-f]{6}$/i
 let imageRevision = 0
@@ -21,6 +22,8 @@ export const blurRadius = (blur: number, width: number, height: number) => blur 
 type Canvas = {
   /** Fraction of the frame height the skin stack occupies. */
   scale: number
+  /** Where the skin stack sits in the frame. */
+  position: Position
   /** What sits behind the skin. */
   mode: BackgroundMode
   /** Frame colour, always #RRGGBB upper case. Kept across modes so it can come back. */
@@ -34,6 +37,7 @@ type Canvas = {
   /** Blur strength 0–1, shared by the blur and image backgrounds. */
   blur: number
   setScale: (scale: number) => void
+  setPosition: (position: Position) => void
   setMode: (mode: BackgroundMode) => void
   setColor: (hex: string) => void
   setImage: (file: Blob | null, name?: string) => void
@@ -45,6 +49,7 @@ export const useCanvas = create<Canvas>()(
   persist(
     (set) => ({
       scale: 0.5,
+      position: CENTRE,
       mode: "color",
       color: "#FFFFFF",
       image: null,
@@ -53,6 +58,7 @@ export const useCanvas = create<Canvas>()(
       fit: "cover",
       blur: 0.5,
       setScale: (scale) => set({ scale: Math.min(1, Math.max(0.1, scale)) }),
+      setPosition: (position) => set({ position: clampPosition(position) }),
       setMode: (mode) => set({ mode }),
       setColor: (hex) => {
         if (HEX.test(hex)) set({ color: hex.toUpperCase() })
@@ -79,7 +85,10 @@ export const useCanvas = create<Canvas>()(
       storage: createJSONStorage(() => lazyStorage),
       // the image is bytes, not JSON: it lives in the session file store and comes back
       // through restoreBackground below
-      partialize: (s) => ({ scale: s.scale, mode: s.mode, color: s.color, fit: s.fit, blur: s.blur }),
+      // v1: position became free {x, y}; a v0 save may hold one of the old named spots
+      version: 1,
+      migrate: (state) => ({ ...(state as object), position: CENTRE }),
+      partialize: (s) => ({ scale: s.scale, position: s.position, mode: s.mode, color: s.color, fit: s.fit, blur: s.blur }),
     },
   ),
 )

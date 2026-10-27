@@ -15,6 +15,7 @@ export type Snapshot = {
   frame: { ratio: ReturnType<typeof useFrame.getState>["ratio"]; custom: { width: number; height: number } }
   canvas: {
     scale: number
+    position: ReturnType<typeof useCanvas.getState>["position"]
     mode: ReturnType<typeof useCanvas.getState>["mode"]
     color: string
     fit: ReturnType<typeof useCanvas.getState>["fit"]

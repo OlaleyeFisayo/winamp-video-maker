@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { IconMinimize } from "@tabler/icons-react"
 import { IconButton } from "../../../shared/ui"
 import Webamp from "webamp"
@@ -10,6 +10,7 @@ import { useTemplate } from "../../../shared/store/useTemplate"
 import { usePreview } from "../../../shared/store/usePreview"
 import { findTemplate, useSavedSkins } from "../../../shared/store/useSavedSkins"
 import { cn } from "../../../shared/lib/cn"
+import { place } from "../../../shared/lib/position"
 import { stripExt } from "../../../shared/lib/stripExt"
 import { putFile } from "../../../shared/lib/sessionFiles"
 import { bufferTrack, clearPlaylist, getCurrentIndex, getElapsed, getStage, getWebamp, loadSkin, prefetchSkins, renameTrack, renderOnce, revealTrack } from "../lib/webamp"
@@ -35,6 +36,9 @@ const nativeFullscreen =
 /** Skin stack size at 1x: main, equalizer and playlist windows, 275 wide, 116 tall each. */
 const SKIN_W = 275
 const SKIN_H = 348
+
+/** How close, in screen px, the player's centre must come to the frame's centre line to snap to it. */
+const SNAP = 6
 
 const toBlobTrack = (file: File) => ({
   blob: file,
@@ -116,6 +120,9 @@ export function Editor() {
   // separate selectors: the editor is the parent of the transport and timeline, so it must not
   // re-render for canvas fields it does not use
   const scale = useCanvas((s) => s.scale)
+  const position = useCanvas((s) => s.position)
+  /** Which centre lines the player is snapped to mid-drag; null when not dragging. */
+  const [guides, setGuides] = useState<{ x: boolean; y: boolean } | null>(null)
   const mode = useCanvas((s) => s.mode)
   const color = useCanvas((s) => s.color)
   const image = useCanvas((s) => s.image)
@@ -410,6 +417,48 @@ export function Editor() {
     [layerImage, fit, overscan, radius],
   )
 
+  // the zoomed stage is SKIN_W x SKIN_H at `zoom`, placed by the same formula as the export
+  const at = place(position, frameSizePx.width, frameSizePx.height, SKIN_W * zoom, SKIN_H * zoom)
+
+  /**
+   * Moves the player when a Webamp title bar is pressed. Only the bar itself starts it: its
+   * close and shade buttons are their own elements, and Webamp's own window drag is already
+   * locked off, so nothing else in the skin changes behaviour.
+   */
+  const onStagePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (e.button !== 0 || !target.classList.contains("draggable")) return
+    e.preventDefault()
+    const W = frameSizePx.width, H = frameSizePx.height
+    const w = SKIN_W * zoom, h = SKIN_H * zoom
+    const start = useCanvas.getState().position
+    const from = place(start, W, H, w, h)
+    const sx = e.clientX, sy = e.clientY
+    // pixels back to a fraction of the free space; an axis with none to move in stays put
+    const toFraction = (px: number, free: number, fallback: number) => (Math.abs(free) < 1 ? fallback : px / free)
+    const move = (ev: PointerEvent) => {
+      const x = from.x + ev.clientX - sx
+      const y = from.y + ev.clientY - sy
+      // snapped against the raw position each move, so pulling past SNAP frees it again
+      const snapX = Math.abs(x + w / 2 - W / 2) <= SNAP
+      const snapY = Math.abs(y + h / 2 - H / 2) <= SNAP
+      useCanvas.getState().setPosition({
+        x: snapX ? 0.5 : toFraction(x, W - w, start.x),
+        y: snapY ? 0.5 : toFraction(y, H - h, start.y),
+      })
+      setGuides({ x: snapX, y: snapY })
+    }
+    const end = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", end)
+      window.removeEventListener("pointercancel", end)
+      setGuides(null)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", end)
+    window.addEventListener("pointercancel", end)
+  }
+
   if (!supported) {
     return (
       <section className="grid place-items-center bg-graphite p-4 md:p-8">
@@ -456,14 +505,15 @@ export function Editor() {
           {mode === "blur" && <LiveBlur radius={radius} />}
           {/* preview is a look at the video, not a player: nothing in the skin responds */}
           <div
-            className={cn(
-              "absolute inset-0 grid place-items-center overflow-hidden",
-              preview && "pointer-events-none",
-            )}
+            className={cn("absolute inset-0 overflow-hidden", preview && "pointer-events-none")}
+            onPointerDownCapture={onStagePointerDown}
           >
             {/* the persistent webamp node is re-parented into here on mount */}
-            <div ref={stage} />
+            <div ref={stage} className="absolute" style={{ left: at.x, top: at.y }} />
           </div>
+          {/* Figma-style centre guides while a drag is snapped; editor chrome, never exported */}
+          {guides?.x && <div aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-px -translate-x-1/2 bg-[#ff00d4]" />}
+          {guides?.y && <div aria-hidden className="pointer-events-none absolute inset-x-0 top-1/2 z-10 h-px -translate-y-1/2 bg-[#ff00d4]" />}
         </div>
       </div>
       {!preview && (
